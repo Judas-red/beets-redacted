@@ -177,13 +177,13 @@ Response format:
 # ruff: noqa: N815
 
 import dataclasses
-from enum import StrEnum
+from enum import Enum
 from typing import Generic, Literal, TypeVar, Union
 
 from pydantic.dataclasses import dataclass
 
 
-class RedAction(StrEnum):
+class RedAction(Enum):
     """Valid actions for the Redacted API."""
 
     BROWSE = "browse"
