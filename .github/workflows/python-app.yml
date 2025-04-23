@@ -44,14 +44,14 @@ jobs:
         pipx install poetry
         poetry install
     - name: Sort imports
-      run: poetry run sort
+      run: poetry run poe sort
     - name: Lint Code
-      run: poetry run lint
+      run: poetry run poe lint
     - name: Format Code
-      run: poetry run format
+      run: poetry run poe format
     - name: Run Tests
-      run: poetry run test
+      run: poetry run poe test
     - name: Type Check
-      run: poetry run type
+      run: poetry run poe type
     - name: Verify
-      run: poetry run checkall
+      run: poetry run poe checkall
