@@ -1,0 +1,91 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "beets-redacted"
+version = "0.1.0"
+description = "A Redacted plugin for Beets."
+readme = "README.md"
+license = "MIT"
+authors = ["Judas Iscariot <judas@noreply.com"]
+homepage = "https://github.com/judas-red/beets-redacted"
+repository = "https://github.com/judas-red/beets-redacted.git"
+packages = [{ include = "beetsplug", from = "." }]
+include = ["LICENSE", "README.md"]
+
+[tool.poetry.dependencies]
+python = ">=3.9,<4"
+requests = ">=2.31.0"
+beets = ">=1.6.0"
+ratelimit = "^2.2.1"
+backoff = "^2.2.1"
+enlighten = "^1.12.0"
+diskcache = "^5.6.3"
+pydantic = "^2.11.1"
+frozendict = "^2.4.6"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0"
+pytest-cov = ">=4.1.0"
+black = ">=25.1.0"
+isort = ">=6.0.1"
+ruff = ">=0.11.2"
+mypy = ">=1.15.0"
+pre-commit = ">=3.6.0"
+types-requests = ">=2.31.0.20240311"
+types-setuptools = ">=69.2.0.20240317"
+poethepoet = ">=0.21.0"
+
+[tool.black]
+skip-magic-trailing-comma = true
+line-length = 100
+
+[tool.isort]
+profile = "black"
+
+[tool.mypy]
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+[tool.ruff]
+line-length = 100
+indent-width = 2
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "B", "UP", "RUF"]
+ignore = []
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = true
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=beetsplug --cov-report=term-missing"
+
+[tool.poe.tasks]
+sort = "isort beetsplug tests"
+lint = "ruff check --fix beetsplug tests"
+format = "black beetsplug tests"
+test = "pytest"
+type = "mypy beetsplug tests"
+check = ["sort", "format", "test"]
+checkall = [ "sort", "format", "test", "lint", "type" ]
