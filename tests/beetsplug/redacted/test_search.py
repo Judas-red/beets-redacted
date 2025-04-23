@@ -694,7 +694,10 @@ def test_artist_torrent_group_matchable(group_name: str, expected_result: bool) 
     ],
 )
 def test_match_artist_album_edge_cases(
-    log: FakeLogger, album: FakeAlbum, group_config: dict, expected: Union[tuple[RedArtistTorrentGroup, RedArtistTorrent], None]
+    log: FakeLogger,
+    album: FakeAlbum,
+    group_config: dict,
+    expected: Union[tuple[RedArtistTorrentGroup, RedArtistTorrent], None],
 ) -> None:
     """Test match_artist_album with parameterized edge cases."""
     response = RedArtistResponse(

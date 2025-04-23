@@ -92,7 +92,10 @@ def extract_album_fields(album: Album) -> Matchable:
 
 
 def score_match(
-    item1: Matchable, item2: Matchable, log: logging.Logger, weights: Union[dict[str, float], None] = None
+    item1: Matchable,
+    item2: Matchable,
+    log: logging.Logger,
+    weights: Union[dict[str, float], None] = None,
 ) -> MatchResult:
     """Score the match between two items.
 

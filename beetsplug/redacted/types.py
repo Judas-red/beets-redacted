@@ -336,7 +336,9 @@ class RedArtistTorrent:
     hasLog: Union[bool, None] = None
     hasCue: Union[bool, None] = None
     logScore: Union[int, None] = None
-    fileCount: Union[int, None] = None  # Number of files in the torrent. May include non-audio files.
+    fileCount: Union[int, None] = (
+        None  # Number of files in the torrent. May include non-audio files.
+    )
     freeTorrent: Union[bool, None] = None
     isNeutralleech: Union[bool, None] = None
     isFreeload: Union[bool, None] = None

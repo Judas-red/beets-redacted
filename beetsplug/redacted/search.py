@@ -294,9 +294,9 @@ def beets_fields_from_artist_torrent_groups(
             continue
 
         source_cls = from_meta.get_source_cls()
-        source_obj: Union[RedArtistResponseResults, RedArtistTorrentGroup, RedArtistTorrent, None] = (
-            None
-        )
+        source_obj: Union[
+            RedArtistResponseResults, RedArtistTorrentGroup, RedArtistTorrent, None
+        ] = None
         if source_cls == RedArtistResponseResults:
             source_obj = artist
         elif source_cls == RedArtistTorrentGroup:
