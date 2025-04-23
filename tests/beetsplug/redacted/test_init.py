@@ -1,6 +1,7 @@
 """Tests for the Redacted import functionality."""
 
 import time
+from typing import Union
 from unittest.mock import patch
 
 import pytest
@@ -19,7 +20,7 @@ from beetsplug.redacted.utils.test_utils import (
 class FakeImportTask:
     """Mock import task for testing."""
 
-    def __init__(self, album: FakeAlbum | None = None, is_album: bool = True) -> None:
+    def __init__(self, album: Union[FakeAlbum, None] = None, is_album: bool = True) -> None:
         """Initialize fake import task.
 
         Args:

@@ -161,7 +161,7 @@ class FakeLibrary:
         self._albums[album.id] = album
         return album
 
-    def albums(self, query: str | None = None) -> Sequence["FakeAlbum"]:
+    def albums(self, query: Union[str, None] = None) -> Sequence["FakeAlbum"]:
         """Get albums from the library.
 
         Args:
@@ -601,7 +601,7 @@ class FakeCommandOpts:
     def __init__(
         self,
         min_score: float = 0.75,
-        query: str | None = None,
+        query: Union[str, None] = None,
         pretend: bool = False,
         force: bool = False,
     ) -> None:
@@ -622,7 +622,7 @@ class FakeCommandOpts:
 class FakeConfigValue:
     """Fake configuration value for testing."""
 
-    def __init__(self, value: float | str) -> None:
+    def __init__(self, value: Union[float, str]) -> None:
         """Initialize fake config value.
 
         Args:

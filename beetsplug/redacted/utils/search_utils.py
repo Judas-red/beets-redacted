@@ -1,8 +1,11 @@
 import logging
 import re
+from typing import Union
 
 
-def normalize_query(artist: str | list[str], album: str, log: logging.Logger) -> str | None:
+def normalize_query(
+    artist: Union[str, list[str]], album: str, log: logging.Logger
+) -> Union[str, None]:
     """Normalize a query string for searching.
 
     Args:

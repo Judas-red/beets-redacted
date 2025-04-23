@@ -3,6 +3,7 @@
 import dataclasses
 import itertools
 import logging
+from typing import Union
 
 from beets.library import Album  # type: ignore[import-untyped]
 from pydantic import ValidationError
@@ -23,7 +24,7 @@ from beetsplug.redacted.types import (
 from beetsplug.redacted.utils.search_utils import normalize_query
 
 
-def torrent_group_matchable(group: RedSearchResult) -> Matchable | None:
+def torrent_group_matchable(group: RedSearchResult) -> Union[Matchable, None]:
     """Extract normalized fields from a Redacted torrent group.
 
     Args:
@@ -38,8 +39,8 @@ def torrent_group_matchable(group: RedSearchResult) -> Matchable | None:
 
 
 def artist_torrent_group_matchable(
-    group: RedArtistTorrentGroup, artist_name: str | None
-) -> Matchable | None:
+    group: RedArtistTorrentGroup, artist_name: Union[str, None]
+) -> Union[Matchable, None]:
     """Extract normalized fields from a Redacted artist torrent group.
 
     Args:
@@ -56,7 +57,7 @@ def artist_torrent_group_matchable(
 
 def match_album(
     album: Album, results: RedSearchResponse, log: logging.Logger, min_score: float
-) -> tuple[RedSearchResult | None, float]:
+) -> tuple[Union[RedSearchResult, None], float]:
     """Check if an album exists in search results.
 
     The matching algorithm uses a weighted scoring system:
@@ -90,7 +91,7 @@ def match_album(
         return None, 0.0
 
     # Find the best match among all groups
-    best_match: RedSearchResult | None = None
+    best_match: Union[RedSearchResult, None] = None
     best_match_score: float = 0.0
     weights = {"artist": 0.5, "title": 0.4, "year": 0.1}
 
@@ -147,7 +148,7 @@ def match_album(
 
 def match_artist_album(
     album: Album, artist_response: RedArtistResponse, log: logging.Logger, min_score: float
-) -> tuple[RedArtistTorrentGroup, RedArtistTorrent] | None:
+) -> tuple[Union[RedArtistTorrentGroup, None], Union[RedArtistTorrent, None]]:
     """Match an album against artist's torrent groups.
 
     Args:
@@ -168,11 +169,11 @@ def match_artist_album(
 
     if not torrent_groups:
         log.debug("Artist {:s} has no torrent groups", artist_data.name)
-        return None
+        return None, None
 
     # Find the best match among all artist's torrent groups
-    best_group: RedArtistTorrentGroup | None = None
-    best_torrent: RedArtistTorrent | None = None
+    best_group: Union[RedArtistTorrentGroup, None] = None
+    best_torrent: Union[RedArtistTorrent, None] = None
     best_match_score: float = 0.0
 
     # Title and year weights are more important when artist is already known
@@ -218,7 +219,7 @@ def match_artist_album(
             artist_data.name,
             [(g.groupId, g.groupName, g.groupYear) for g in torrent_groups if g.groupName],
         )
-        return None
+        return None, None
 
     if best_match_score < min_score:
         log.debug(
@@ -229,7 +230,7 @@ def match_artist_album(
             best_match_score,
             min_score,
         )
-        return None
+        return None, None
 
     log.debug(
         "Best match for {0} from artist's groups: {1} (score: {2:.2f})",
@@ -241,7 +242,7 @@ def match_artist_album(
     return best_group, best_torrent
 
 
-def get_artist_id_from_red_group(group: RedSearchResult, log: logging.Logger) -> int | None:
+def get_artist_id_from_red_group(group: RedSearchResult, log: logging.Logger) -> Union[int, None]:
     """Extract artist ID from a torrent.
 
     Args:
@@ -274,7 +275,7 @@ def beets_fields_from_artist_torrent_groups(
     group: RedArtistTorrentGroup,
     torrent: RedArtistTorrent,
     log: logging.Logger,
-) -> BeetsRedFields | None:
+) -> Union[BeetsRedFields, None]:
     """Extract fields from an artist group and torrent match.
 
     Args:
@@ -293,9 +294,9 @@ def beets_fields_from_artist_torrent_groups(
             continue
 
         source_cls = from_meta.get_source_cls()
-        source_obj: RedArtistResponseResults | RedArtistTorrentGroup | RedArtistTorrent | None = (
-            None
-        )
+        source_obj: Union[
+            RedArtistResponseResults, RedArtistTorrentGroup, RedArtistTorrent, None
+        ] = None
         if source_cls == RedArtistResponseResults:
             source_obj = artist
         elif source_cls == RedArtistTorrentGroup:
@@ -337,7 +338,7 @@ def beets_fields_from_artist_torrent_groups(
 
 def search(
     album: Album, client: RedactedClient, log: logging.Logger, min_score: float
-) -> BeetsRedFields | None:
+) -> Union[BeetsRedFields, None]:
     """Search for Redacted torrents matching an album using a two-step process.
 
     First searches for torrents using the browse API, then looks up artist details
@@ -421,10 +422,8 @@ def search(
         return None
 
     # Find a match for the album in the artist's discography
-    artist_match = match_artist_album(album, artist_data, log, min_score)
-    if artist_match:
-        artist_group, artist_torrent = artist_match
-
+    artist_group, artist_torrent = match_artist_album(album, artist_data, log, min_score)
+    if artist_group and artist_torrent:
         # Extract album update fields from artist group (album) and torrent match
         return beets_fields_from_artist_torrent_groups(
             artist_data.response, artist_group, artist_torrent, log

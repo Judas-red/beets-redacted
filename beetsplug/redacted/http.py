@@ -4,6 +4,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
+from typing import Union
 
 import requests
 from backoff import expo, full_jitter, on_exception
@@ -131,7 +132,7 @@ class CachedRequestsClient(RequestsClient):
 
     def _get_cached_response(
         self, params: dict[str, str], headers: dict[str, str]
-    ) -> requests.Response | None:
+    ) -> Union[requests.Response, None]:
         """Get a cached response if available and not expired.
 
         Args:

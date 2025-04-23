@@ -1,6 +1,6 @@
 """Tests for matching.py functionality."""
 
-from typing import Any
+from typing import Any, Union
 
 import pytest
 
@@ -61,7 +61,7 @@ def test_string_similarity(str1: str, str2: str, expected_range: tuple[float, fl
         (None, None, 1.0),
     ],
 )
-def test_year_similarity(year1: int | None, year2: int | None, expected: float) -> None:
+def test_year_similarity(year1: Union[int, None], year2: Union[int, None], expected: float) -> None:
     """Test year_similarity function with various year combinations."""
     assert year_similarity(year1, year2) == expected
 
@@ -169,7 +169,7 @@ def test_score_match(
     item1: Matchable,
     item2: Matchable,
     expected_scores: dict[str, tuple[float, float]],
-    weights: dict[str, float] | None,
+    weights: Union[dict[str, float], None],
 ) -> None:
     """Test score_match function with various match scenarios."""
     result = score_match(item1, item2, log, weights)

@@ -1,0 +1,55 @@
+# This workflow
+# - installs Python dependencies,
+# - sorts imports,
+# - lints code,
+# - formats code,
+# - runs tests,
+# - checks Python type hints, and
+# - verifies the build.
+#
+# These steps are run for each supported Python version, plus the latest version.
+
+name: Python application
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        python-version: ['3.9', '3.x']
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install poetry
+      run: pipx install poetry
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: poetry
+    - name: Install dependencies
+      run: poetry install
+    - name: Sort imports
+      run: poetry run poe sort
+    - name: Lint Code
+      run: poetry run poe lint
+    - name: Format Code
+      run: poetry run poe format
+    - name: Run Tests
+      run: poetry run poe test
+    - name: Type Check
+      run: poetry run poe type
+    - name: Verify
+      run: poetry run poe checkall

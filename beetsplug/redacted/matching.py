@@ -2,6 +2,7 @@
 
 import logging
 from difflib import SequenceMatcher
+from typing import Union
 
 from beets.library import Album  # type: ignore[import-untyped]
 from pydantic.dataclasses import dataclass
@@ -16,9 +17,9 @@ class Matchable:
     title: str = ""
 
     # Optional fields
-    year: int | None = None
-    media: str | None = None
-    format: str | None = None
+    year: Union[int, None] = None
+    media: Union[str, None] = None
+    format: Union[str, None] = None
 
 
 @dataclass
@@ -44,7 +45,7 @@ def string_similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
-def year_similarity(year1: int | None, year2: int | None) -> float:
+def year_similarity(year1: Union[int, None], year2: Union[int, None]) -> float:
     """Calculate year similarity.
 
     Args:
@@ -91,7 +92,10 @@ def extract_album_fields(album: Album) -> Matchable:
 
 
 def score_match(
-    item1: Matchable, item2: Matchable, log: logging.Logger, weights: dict[str, float] | None = None
+    item1: Matchable,
+    item2: Matchable,
+    log: logging.Logger,
+    weights: Union[dict[str, float], None] = None,
 ) -> MatchResult:
     """Score the match between two items.
 

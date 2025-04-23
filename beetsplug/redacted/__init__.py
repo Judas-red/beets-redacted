@@ -3,6 +3,7 @@
 
 import time
 from pkgutil import extend_path
+from typing import Union
 
 import frozendict
 from beets.dbcore import types as dbtypes  # type: ignore[import-untyped]
@@ -72,7 +73,7 @@ class RedactedPlugin(BeetsPlugin):
         if self._client and self.config["auto"].get(bool):
             self.import_stages = [self.import_stage]
 
-    def _get_client(self, http_client: HTTPClient) -> RedactedClient | None:
+    def _get_client(self, http_client: HTTPClient) -> Union[RedactedClient, None]:
         """Get or create the RedactedClient instance."""
         api_key = self.config["api_key"].get()
         if not api_key:
