@@ -178,7 +178,7 @@ Response format:
 
 import dataclasses
 from enum import StrEnum
-from typing import Generic, Literal, TypeVar
+from typing import Generic, Literal, TypeVar, Union
 
 from pydantic.dataclasses import dataclass
 
@@ -210,32 +210,32 @@ class RedSearchTorrent:
     """
 
     torrentId: int
-    editionId: int | None = None
-    artists: list[RedArtist] | None = None
-    remastered: bool | None = None
-    remasterYear: int | None = None
-    remasterCatalogueNumber: str | None = None
-    remasterTitle: str | None = None
-    media: str | None = None
-    encoding: str | None = None
-    format: str | None = None
-    hasLog: bool | None = None
-    logScore: int | None = None
-    hasCue: bool | None = None
-    scene: bool | None = None
-    vanityHouse: bool | None = None
-    fileCount: int | None = None
-    time: str | None = None
-    size: int | None = None
-    snatches: int | None = None
-    seeders: int | None = None
-    leechers: int | None = None
-    isFreeleech: bool | None = None
-    isNeutralLeech: bool | None = None
-    isFreeload: bool | None = None
-    isPersonalFreeleech: bool | None = None
-    trumpable: bool | None = None
-    canUseToken: bool | None = None
+    editionId: Union[int, None] = None
+    artists: Union[list[RedArtist], None] = None
+    remastered: Union[bool, None] = None
+    remasterYear: Union[int, None] = None
+    remasterCatalogueNumber: Union[str, None] = None
+    remasterTitle: Union[str, None] = None
+    media: Union[str, None] = None
+    encoding: Union[str, None] = None
+    format: Union[str, None] = None
+    hasLog: Union[bool, None] = None
+    logScore: Union[int, None] = None
+    hasCue: Union[bool, None] = None
+    scene: Union[bool, None] = None
+    vanityHouse: Union[bool, None] = None
+    fileCount: Union[int, None] = None
+    time: Union[str, None] = None
+    size: Union[int, None] = None
+    snatches: Union[int, None] = None
+    seeders: Union[int, None] = None
+    leechers: Union[int, None] = None
+    isFreeleech: Union[bool, None] = None
+    isNeutralLeech: Union[bool, None] = None
+    isFreeload: Union[bool, None] = None
+    isPersonalFreeleech: Union[bool, None] = None
+    trumpable: Union[bool, None] = None
+    canUseToken: Union[bool, None] = None
 
 
 @dataclass
@@ -247,20 +247,20 @@ class RedSearchResult:
     database.
     """
 
-    groupId: int | None = None
-    torrents: list[RedSearchTorrent] | None = None
-    groupName: str | None = None
-    artist: str | None = None
-    tags: list[str] | None = None
-    bookmarked: bool | None = None
-    vanityHouse: bool | None = None
-    groupYear: int | None = None
-    releaseType: str | None = None
-    groupTime: int | None = None
-    maxSize: int | None = None
-    totalSnatched: int | None = None
-    totalSeeders: int | None = None
-    totalLeechers: int | None = None
+    groupId: Union[int, None] = None
+    torrents: Union[list[RedSearchTorrent], None] = None
+    groupName: Union[str, None] = None
+    artist: Union[str, None] = None
+    tags: Union[list[str], None] = None
+    bookmarked: Union[bool, None] = None
+    vanityHouse: Union[bool, None] = None
+    groupYear: Union[int, None] = None
+    releaseType: Union[str, None] = None
+    groupTime: Union[int, None] = None
+    maxSize: Union[int, None] = None
+    totalSnatched: Union[int, None] = None
+    totalSeeders: Union[int, None] = None
+    totalLeechers: Union[int, None] = None
 
 
 @dataclass
@@ -323,29 +323,29 @@ class RedArtistTorrent:
     - Different field availability and naming conventions
     """
 
-    id: int | None = None
-    groupId: int | None = None
-    media: str | None = None  # Media, e.g. "Vinyl", "CD", "Web"
-    format: str | None = None  # Format, e.g. "FLAC", "MP3"
-    encoding: str | None = None  # Encoding, e.g. "24bit Lossless", "VBR", "CBR"
-    remasterYear: int | None = None  # Remaster year. 0 indicates no remaster or no value.
-    remastered: bool | None = None
-    remasterTitle: str | None = None
-    remasterRecordLabel: str | None = None
-    scene: bool | None = None
-    hasLog: bool | None = None
-    hasCue: bool | None = None
-    logScore: int | None = None
-    fileCount: int | None = None  # Number of files in the torrent. May include non-audio files.
-    freeTorrent: bool | None = None
-    isNeutralleech: bool | None = None
-    isFreeload: bool | None = None
-    size: int | None = None  # Size of the torrent in bytes.
-    leechers: int | None = None
-    seeders: int | None = None
-    snatched: int | None = None
-    time: str | None = None  # Time string, e.g. "2009-06-06 19:04:22"
-    hasFile: int | None = None  # Unclear what this is.
+    id: Union[int, None] = None
+    groupId: Union[int, None] = None
+    media: Union[str, None] = None  # Media, e.g. "Vinyl", "CD", "Web"
+    format: Union[str, None] = None  # Format, e.g. "FLAC", "MP3"
+    encoding: Union[str, None] = None  # Encoding, e.g. "24bit Lossless", "VBR", "CBR"
+    remasterYear: Union[int, None] = None  # Remaster year. 0 indicates no remaster or no value.
+    remastered: Union[bool, None] = None
+    remasterTitle: Union[str, None] = None
+    remasterRecordLabel: Union[str, None] = None
+    scene: Union[bool, None] = None
+    hasLog: Union[bool, None] = None
+    hasCue: Union[bool, None] = None
+    logScore: Union[int, None] = None
+    fileCount: Union[int, None] = None  # Number of files in the torrent. May include non-audio files.
+    freeTorrent: Union[bool, None] = None
+    isNeutralleech: Union[bool, None] = None
+    isFreeload: Union[bool, None] = None
+    size: Union[int, None] = None  # Size of the torrent in bytes.
+    leechers: Union[int, None] = None
+    seeders: Union[int, None] = None
+    snatched: Union[int, None] = None
+    time: Union[str, None] = None  # Time string, e.g. "2009-06-06 19:04:22"
+    hasFile: Union[int, None] = None  # Unclear what this is.
 
 
 @dataclass
@@ -361,47 +361,47 @@ class RedArtistTorrentGroup:
     - The artist is implied by the parent artist response
     """
 
-    groupId: int | None = None
-    groupName: str | None = None
-    groupYear: int | None = None
-    groupRecordLabel: str | None = None
-    groupCatalogueNumber: str | None = None
-    tags: list[str] | None = None
-    releaseType: int | None = None
-    groupVanityHouse: bool | None = None
-    hasBookmarked: bool | None = None
-    torrent: list[RedArtistTorrent] | None = None
+    groupId: Union[int, None] = None
+    groupName: Union[str, None] = None
+    groupYear: Union[int, None] = None
+    groupRecordLabel: Union[str, None] = None
+    groupCatalogueNumber: Union[str, None] = None
+    tags: Union[list[str], None] = None
+    releaseType: Union[int, None] = None
+    groupVanityHouse: Union[bool, None] = None
+    hasBookmarked: Union[bool, None] = None
+    torrent: Union[list[RedArtistTorrent], None] = None
 
 
 @dataclass
 class RedArtistRequest:
     """Type for a request in an artist result."""
 
-    requestId: int | None = None
-    categoryId: int | None = None
-    title: str | None = None
-    year: int | None = None
-    timeAdded: str | None = None
-    votes: int | None = None
-    bounty: int | None = None
+    requestId: Union[int, None] = None
+    categoryId: Union[int, None] = None
+    title: Union[str, None] = None
+    year: Union[int, None] = None
+    timeAdded: Union[str, None] = None
+    votes: Union[int, None] = None
+    bounty: Union[int, None] = None
 
 
 @dataclass
 class RedArtistResponseResults:
     """Type for the artist response data."""
 
-    id: int | None = None
-    name: str | None = None
-    notificationsEnabled: bool | None = None
-    hasBookmarked: bool | None = None
-    image: str | None = None
-    body: str | None = None
-    vanityHouse: bool | None = None
-    tags: list[RedArtistTag] | None = None
-    similarArtists: list[dict] | None = None
-    statistics: RedArtistStatistics | None = None
-    torrentgroup: list[RedArtistTorrentGroup] | None = None
-    requests: list[RedArtistRequest] | None = None
+    id: Union[int, None] = None
+    name: Union[str, None] = None
+    notificationsEnabled: Union[bool, None] = None
+    hasBookmarked: Union[bool, None] = None
+    image: Union[str, None] = None
+    body: Union[str, None] = None
+    vanityHouse: Union[bool, None] = None
+    tags: Union[list[RedArtistTag], None] = None
+    similarArtists: Union[list[dict], None] = None
+    statistics: Union[RedArtistStatistics, None] = None
+    torrentgroup: Union[list[RedArtistTorrentGroup], None] = None
+    requests: Union[list[RedArtistRequest], None] = None
 
 
 @dataclass
@@ -411,7 +411,7 @@ class RedArtistResponse(RedSuccessResponse):
     response: RedArtistResponseResults
 
 
-RedactedAPIResponse = RedSearchResponse | RedArtistResponse | RedFailureResponse
+RedactedAPIResponse = Union[RedSearchResponse, RedArtistResponse, RedFailureResponse]
 
 # Field metadata for the Beets database
 
@@ -441,7 +441,7 @@ class RedBeetsFieldMapping(Generic[SourceT, ValueT]):
         """Get the value type from the type parameters at runtime."""
         return self.value_type
 
-    def get_value(self, obj: SourceT) -> ValueT | None:
+    def get_value(self, obj: SourceT) -> Union[ValueT, None]:
         """Get the value of the source attribute from the object."""
         if not isinstance(obj, self.get_source_cls()):
             raise TypeError(f"Expected {self.get_source_cls().__name__}, got {type(obj).__name__}")
@@ -469,105 +469,105 @@ class BeetsRedFields:
     """Fields to update on a Beets album relating to Redacted torrents."""
 
     # The last time the redacted fields were modified, in seconds since the epoch
-    red_mtime: float | None = dataclasses.field(default=None)
+    red_mtime: Union[float, None] = dataclasses.field(default=None)
 
     # ID fields
-    red_artistid: int | None = dataclasses.field(
+    red_artistid: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[AR, int](AR, "id", int), "required": True}
     )
-    red_groupid: int | None = dataclasses.field(
+    red_groupid: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[GR, int](GR, "groupId", int), "required": True}
     )
-    red_torrentid: int | None = dataclasses.field(
+    red_torrentid: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, int](TR, "id", int), "required": True}
     )
 
     # Artist fields, from RedArtistResponse
-    red_artist: str | None = dataclasses.field(
+    red_artist: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[AR, str](AR, "name", str)}
     )
-    red_image: str | None = dataclasses.field(
+    red_image: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[AR, str](AR, "image", str)}
     )
 
     # Group fields, from RedArtistTorrentGroup
-    red_groupname: str | None = dataclasses.field(
+    red_groupname: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[GR, str](GR, "groupName", str)}
     )
-    red_groupyear: int | None = dataclasses.field(
+    red_groupyear: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[GR, int](GR, "groupYear", int)}
     )
-    red_grouprecordlabel: str | None = dataclasses.field(
+    red_grouprecordlabel: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[GR, str](GR, "groupRecordLabel", str)}
     )
-    red_groupcataloguenumber: str | None = dataclasses.field(
+    red_groupcataloguenumber: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[GR, str](GR, "groupCatalogueNumber", str)}
     )
-    red_groupreleasetype: int | None = dataclasses.field(
+    red_groupreleasetype: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[GR, int](GR, "releaseType", int)}
     )
 
     # Torrent fields, from RedArtistTorrent
-    red_media: str | None = dataclasses.field(
+    red_media: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, str](TR, "media", str)}
     )
-    red_format: str | None = dataclasses.field(
+    red_format: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, str](TR, "format", str)}
     )
-    red_encoding: str | None = dataclasses.field(
+    red_encoding: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, str](TR, "encoding", str)}
     )
-    red_remastered: bool | None = dataclasses.field(
+    red_remastered: Union[bool, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, bool](TR, "remastered", bool)}
     )
-    red_remasteryear: int | None = dataclasses.field(
+    red_remasteryear: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, int](TR, "remasterYear", int)}
     )
-    red_remastertitle: str | None = dataclasses.field(
+    red_remastertitle: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, str](TR, "remasterTitle", str)}
     )
-    red_remasterrecordlabel: str | None = dataclasses.field(
+    red_remasterrecordlabel: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, str](TR, "remasterRecordLabel", str)}
     )
-    red_scene: bool | None = dataclasses.field(
+    red_scene: Union[bool, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, bool](TR, "scene", bool)}
     )
-    red_haslog: bool | None = dataclasses.field(
+    red_haslog: Union[bool, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, bool](TR, "hasLog", bool)}
     )
-    red_logscore: int | None = dataclasses.field(
+    red_logscore: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, int](TR, "logScore", int)}
     )
-    red_hascue: bool | None = dataclasses.field(
+    red_hascue: Union[bool, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, bool](TR, "hasCue", bool)}
     )
-    red_filecount: int | None = dataclasses.field(
+    red_filecount: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, int](TR, "fileCount", int)}
     )
-    red_freetorrent: bool | None = dataclasses.field(
+    red_freetorrent: Union[bool, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, bool](TR, "freeTorrent", bool)}
     )
-    red_isneutralleech: bool | None = dataclasses.field(
+    red_isneutralleech: Union[bool, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, bool](TR, "isNeutralleech", bool)}
     )
-    red_isfreeload: bool | None = dataclasses.field(
+    red_isfreeload: Union[bool, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, bool](TR, "isFreeload", bool)}
     )
-    red_size: int | None = dataclasses.field(
+    red_size: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, int](TR, "size", int)}
     )
-    red_leechers: int | None = dataclasses.field(
+    red_leechers: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, int](TR, "leechers", int)}
     )
-    red_seeders: int | None = dataclasses.field(
+    red_seeders: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, int](TR, "seeders", int)}
     )
-    red_snatched: int | None = dataclasses.field(
+    red_snatched: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, int](TR, "snatched", int)}
     )
-    red_time: str | None = dataclasses.field(
+    red_time: Union[str, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, str](TR, "time", str)}
     )
-    red_hasfile: int | None = dataclasses.field(
+    red_hasfile: Union[int, None] = dataclasses.field(
         default=None, metadata={"from": RBF[TR, int](TR, "hasFile", int)}
     )

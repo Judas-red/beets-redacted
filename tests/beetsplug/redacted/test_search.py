@@ -2,6 +2,7 @@
 
 import dataclasses
 import itertools
+from typing import Union
 
 import pytest
 
@@ -182,7 +183,7 @@ def _make_test_group(
     artist: str = TEST_ARTIST_NAME,
     name: str = TEST_ALBUM_NAME,
     year: int = TEST_ALBUM_YEAR,
-    torrent: RedSearchTorrent | None = None,
+    torrent: Union[RedSearchTorrent, None] = None,
 ) -> RedSearchResult:
     """Create a test group for testing.
 
@@ -247,7 +248,7 @@ def _setup_artist_response(
     client: FakeRedactedClient,
     artist_id: int = TEST_ARTIST_ID,
     artist_name: str = TEST_ARTIST_NAME,
-    torrent_groups: list[RedArtistTorrentGroup] | None = None,
+    torrent_groups: Union[list[RedArtistTorrentGroup], None] = None,
 ) -> None:
     """Set up artist response for the client.
 
@@ -647,7 +648,7 @@ def test_artist_torrent_group_matchable(group_name: str, expected_result: bool) 
 @pytest.mark.parametrize(
     "group_config, expected",
     [
-        pytest.param({"torrentgroup": []}, None, id="no_torrent_groups"),
+        pytest.param({"torrentgroup": []}, (None, None), id="no_torrent_groups"),
         pytest.param(
             {
                 "torrentgroup": [
@@ -659,7 +660,7 @@ def test_artist_torrent_group_matchable(group_name: str, expected_result: bool) 
                     )
                 ]
             },
-            None,
+            (None, None),
             id="missing_name",
         ),
         pytest.param(
@@ -673,7 +674,7 @@ def test_artist_torrent_group_matchable(group_name: str, expected_result: bool) 
                     )
                 ]
             },
-            None,
+            (None, None),
             id="low_score_match",
         ),
         pytest.param(
@@ -687,13 +688,13 @@ def test_artist_torrent_group_matchable(group_name: str, expected_result: bool) 
                     )
                 ]
             },
-            None,
+            (None, None),
             id="low_score_match",
         ),
     ],
 )
 def test_match_artist_album_edge_cases(
-    log: FakeLogger, album: FakeAlbum, group_config: dict, expected: tuple | None
+    log: FakeLogger, album: FakeAlbum, group_config: dict, expected: Union[tuple[RedArtistTorrentGroup, RedArtistTorrent], None]
 ) -> None:
     """Test match_artist_album with parameterized edge cases."""
     response = RedArtistResponse(
@@ -791,7 +792,7 @@ def test_beets_fields_from_artist_torrent_groups(
     ],
 )
 def test_get_artist_id_from_red_group_exceptions(
-    log: FakeLogger, group_config: dict, torrent_config: dict, expected_result: int | None
+    log: FakeLogger, group_config: dict, torrent_config: dict, expected_result: Union[int, None]
 ) -> None:
     """Test exception handling in get_artist_id_from_red_group with parameterized inputs."""
     from beetsplug.redacted.search import get_artist_id_from_red_group
