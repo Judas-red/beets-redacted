@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A Redacted plugin for Beets."
 readme = "README.md"
 license = "MIT"
-authors = ["Judas Iscariot <judas@noreply.com"]
+authors = ["Judas Iscariot <judas@noreply.com>"]
 homepage = "https://github.com/judas-red/beets-redacted"
 repository = "https://github.com/judas-red/beets-redacted.git"
 packages = [{ include = "beetsplug", from = "." }]
