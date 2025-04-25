@@ -9,7 +9,7 @@ from beets.library import Album  # type: ignore[import-untyped]
 from pydantic import ValidationError
 from ratelimit import RateLimitException  # type: ignore[import-untyped]
 
-from beetsplug.redacted.client import RedactedClient
+from beetsplug.redacted.client import Client
 from beetsplug.redacted.exceptions import RedactedError
 from beetsplug.redacted.matching import Matchable, extract_album_fields, score_match
 from beetsplug.redacted.types import (
@@ -337,7 +337,7 @@ def beets_fields_from_artist_torrent_groups(
 
 
 def search(
-    album: Album, client: RedactedClient, log: logging.Logger, min_score: float
+    album: Album, client: Client, log: logging.Logger, min_score: float
 ) -> Union[BeetsRedFields, None]:
     """Search for Redacted torrents matching an album using a two-step process.
 
@@ -369,7 +369,7 @@ def search(
 
         try:
             log.debug("Searching for torrents with query: {0}", search_query)
-            results = client.browse(search_query)
+            results = client.search(search_query)
         except (RedactedError, RateLimitException) as e:
             log.debug(
                 "Error searching for torrents for {0} - {1}: {2}", album.albumartist, album.album, e

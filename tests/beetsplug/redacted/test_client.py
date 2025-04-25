@@ -5,7 +5,7 @@ from collections.abc import Generator
 
 import pytest
 
-from beetsplug.redacted.client import RedactedClient
+from beetsplug.redacted.client import Client
 from beetsplug.redacted.exceptions import RedactedError
 from beetsplug.redacted.types import RedAction
 from beetsplug.redacted.utils.test_utils import FakeHTTPClient, FakeLogger
@@ -18,7 +18,7 @@ def log():
 
 
 @pytest.fixture
-def client(log: FakeLogger) -> Generator[RedactedClient, None, None]:
+def client(log: FakeLogger) -> Generator[Client, None, None]:
     """Create a test client.
 
     Args:
@@ -27,10 +27,10 @@ def client(log: FakeLogger) -> Generator[RedactedClient, None, None]:
     Yields:
         A RedactedClient instance configured for testing.
     """
-    yield RedactedClient(api_key="test_key", http_client=FakeHTTPClient(), log=log)
+    yield Client(api_key="test_key", http_client=FakeHTTPClient(), log=log)
 
 
-def test_make_api_request_success(client: RedactedClient) -> None:
+def test_make_api_request_success(client: Client) -> None:
     """Test making a successful API request."""
     assert isinstance(client.http_client, FakeHTTPClient)
     client.http_client.add(
@@ -43,7 +43,7 @@ def test_make_api_request_success(client: RedactedClient) -> None:
     assert response == {"status": "success", "response": {"test": "data"}}
 
 
-def test_make_api_request_rate_limit(client: RedactedClient) -> None:
+def test_make_api_request_rate_limit(client: Client) -> None:
     """Test making an API request that hits rate limit."""
     assert isinstance(client.http_client, FakeHTTPClient)
     client.http_client.add(
@@ -57,7 +57,7 @@ def test_make_api_request_rate_limit(client: RedactedClient) -> None:
         client._make_api_request(RedAction.BROWSE, {})
 
 
-def test_make_api_request_json_parse_error(client: RedactedClient) -> None:
+def test_make_api_request_json_parse_error(client: Client) -> None:
     """Test making an API request with invalid JSON response."""
     assert isinstance(client.http_client, FakeHTTPClient)
     client.http_client.add(
@@ -70,7 +70,7 @@ def test_make_api_request_json_parse_error(client: RedactedClient) -> None:
         client._make_api_request(RedAction.BROWSE, {})
 
 
-def test_browse(client: RedactedClient) -> None:
+def test_browse(client: Client) -> None:
     """Test browsing torrents."""
     assert isinstance(client.http_client, FakeHTTPClient)
     mock_response = {
@@ -132,7 +132,7 @@ def test_browse(client: RedactedClient) -> None:
         response=mock_response,
     )
 
-    response = client.browse("test query")
+    response = client.search("test query")
     assert response.status == "success"
     assert len(response.response.results) == 1
     result = response.response.results[0]
@@ -146,7 +146,7 @@ def test_browse(client: RedactedClient) -> None:
     assert torrent.format == "FLAC"
 
 
-def test_browse_validation_error(client: RedactedClient) -> None:
+def test_browse_validation_error(client: Client) -> None:
     """Test handling validation errors when browsing torrents."""
     assert isinstance(client.http_client, FakeHTTPClient)
     # Missing required fields in the response
@@ -176,11 +176,11 @@ def test_browse_validation_error(client: RedactedClient) -> None:
     )
 
     with pytest.raises(RedactedError) as excinfo:
-        client.browse("test query")
+        client.search("test query")
     assert "Invalid response format" in str(excinfo.value)
 
 
-def test_get_artist(client: RedactedClient) -> None:
+def test_get_artist(client: Client) -> None:
     """Test getting artist details by ID."""
     assert isinstance(client.http_client, FakeHTTPClient)
     mock_response = {
@@ -269,7 +269,7 @@ def test_get_artist(client: RedactedClient) -> None:
     assert response.response.torrentgroup[0].torrent[0].id == 98765
 
 
-def test_get_artist_validation_error(client: RedactedClient) -> None:
+def test_get_artist_validation_error(client: Client) -> None:
     """Test handling validation errors when getting artist details."""
     assert isinstance(client.http_client, FakeHTTPClient)
     # Missing required fields in the response
@@ -285,7 +285,7 @@ def test_get_artist_validation_error(client: RedactedClient) -> None:
     assert "Invalid response format" in str(excinfo.value)
 
 
-def test_get_artist_error_response(client: RedactedClient) -> None:
+def test_get_artist_error_response(client: Client) -> None:
     """Test handling error response when getting artist details."""
     assert isinstance(client.http_client, FakeHTTPClient)
     mock_response = {"status": "failure", "error": "Artist not found"}

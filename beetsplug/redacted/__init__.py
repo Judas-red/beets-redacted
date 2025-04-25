@@ -12,7 +12,7 @@ from beets.library import Library  # type: ignore[import-untyped]
 from beets.plugins import BeetsPlugin  # type: ignore[import-untyped]
 from beets.ui import UserError  # type: ignore[import-untyped]
 
-from beetsplug.redacted.client import RedactedClient
+from beetsplug.redacted.client import Client
 from beetsplug.redacted.command import RedactedCommand
 from beetsplug.redacted.http import CachedRequestsClient, HTTPClient
 from beetsplug.redacted.search import search
@@ -73,13 +73,13 @@ class RedactedPlugin(BeetsPlugin):
         if self._client and self.config["auto"].get(bool):
             self.import_stages = [self.import_stage]
 
-    def _get_client(self, http_client: HTTPClient) -> Union[RedactedClient, None]:
+    def _get_client(self, http_client: HTTPClient) -> Union[Client, None]:
         """Get or create the RedactedClient instance."""
         api_key = self.config["api_key"].get()
         if not api_key:
             self._log.warning("redacted: api_key not set in configuration.")
             return None
-        return RedactedClient(api_key, http_client, self._log)
+        return Client(api_key, http_client, self._log)
 
     def cleanup(self, _: Library) -> None:
         """Clean up resources when Beets is shutting down."""
@@ -125,5 +125,5 @@ class RedactedPlugin(BeetsPlugin):
         if not api_key:
             raise UserError("redacted: api_key not set")
 
-        client = RedactedClient(api_key, self._http_client, self._log)
+        client = Client(api_key, self._http_client, self._log)
         return [RedactedCommand(self.config, self._log, client)]

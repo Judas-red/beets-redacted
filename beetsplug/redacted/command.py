@@ -11,7 +11,7 @@ import enlighten  # type: ignore[import-untyped]
 from beets import ui  # type: ignore[import-untyped]
 from beets.library import Library  # type: ignore[import-untyped]
 
-from beetsplug.redacted.client import RedactedClient
+from beetsplug.redacted.client import Client
 from beetsplug.redacted.search import search
 
 
@@ -20,7 +20,7 @@ def command_func(
     lib: Library,
     opts: Values,
     args: list[str],
-    client: RedactedClient,
+    client: Client,
     log: logging.Logger,
 ) -> dict[str, int]:
     """Execute the redacted command.
@@ -94,7 +94,7 @@ def command_func(
 class RedactedCommand(ui.Subcommand):
     """Command for searching and updating Redacted information for library albums."""
 
-    def __init__(self, config: Any, log: logging.Logger, client: RedactedClient) -> None:
+    def __init__(self, config: Any, log: logging.Logger, client: Client) -> None:
         """Initialize the command.
 
         Args:

@@ -75,7 +75,7 @@ import requests
 from beets import library  # type: ignore[import-untyped]
 from beets.library import Album  # type: ignore[import-untyped]
 
-from beetsplug.redacted.client import RedactedClient
+from beetsplug.redacted.client import Client
 from beetsplug.redacted.exceptions import RedactedError
 from beetsplug.redacted.http import HTTPClient
 from beetsplug.redacted.types import (
@@ -523,7 +523,7 @@ class FakeHTTPClient(HTTPClient):
         return self.responses[request_hash]
 
 
-class FakeRedactedClient(RedactedClient):
+class FakeClient(Client):
     """Fake implementation of RedactedClient for testing."""
 
     def __init__(self) -> None:
@@ -537,7 +537,7 @@ class FakeRedactedClient(RedactedClient):
         self.error_artist_queries: set[int] = set()
         self.rate_limit_artist_queries: set[int] = set()
 
-    def browse(self, query: str) -> RedSearchResponse:
+    def search(self, query: str) -> RedSearchResponse:
         """Fake implementation of browse method.
 
         Args:

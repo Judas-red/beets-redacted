@@ -28,7 +28,7 @@ from beetsplug.redacted.utils.test_utils import (
     FakeAlbum,
     FakeLibrary,
     FakeLogger,
-    FakeRedactedClient,
+    FakeClient,
 )
 
 TEST_ARTIST_ID = 1
@@ -47,9 +47,9 @@ def log() -> FakeLogger:
 
 
 @pytest.fixture
-def client() -> FakeRedactedClient:
+def client() -> FakeClient:
     """Create a fake client for testing."""
-    return FakeRedactedClient()
+    return FakeClient()
 
 
 @pytest.fixture
@@ -230,7 +230,7 @@ def _make_test_group(
 
 
 def _setup_search_responses(
-    client: FakeRedactedClient, query: str, groups: list[RedSearchResult]
+    client: FakeClient, query: str, groups: list[RedSearchResult]
 ) -> None:
     """Set up search responses for the client.
 
@@ -245,7 +245,7 @@ def _setup_search_responses(
 
 
 def _setup_artist_response(
-    client: FakeRedactedClient,
+    client: FakeClient,
     artist_id: int = TEST_ARTIST_ID,
     artist_name: str = TEST_ARTIST_NAME,
     torrent_groups: Union[list[RedArtistTorrentGroup], None] = None,
@@ -327,7 +327,7 @@ def test_match_album_exact_match(
 
 def test_search_torrents_with_artist_lookup(
     log: FakeLogger,
-    client: FakeRedactedClient,
+    client: FakeClient,
     album: FakeAlbum,
     test_torrent: RedSearchTorrent,
     test_artist_group: RedArtistTorrentGroup,
@@ -364,7 +364,7 @@ def test_search_torrents_with_artist_lookup(
 
 def test_search_torrents_artist_lookup_better_match(
     log: FakeLogger,
-    client: FakeRedactedClient,
+    client: FakeClient,
     album: FakeAlbum,
     test_torrent: RedSearchTorrent,
     test_artist_torrent: RedArtistTorrent,
@@ -411,7 +411,7 @@ def test_search_torrents_artist_lookup_better_match(
 
 
 def test_search_torrents_artist_lookup_failed(
-    log: FakeLogger, client: FakeRedactedClient, album: FakeAlbum, test_torrent: RedSearchTorrent
+    log: FakeLogger, client: FakeClient, album: FakeAlbum, test_torrent: RedSearchTorrent
 ) -> None:
     """Test handling case where artist lookup fails but we still use initial match."""
     # Set up test response for initial browse search
@@ -442,7 +442,7 @@ def test_search_torrents_artist_lookup_failed(
 
 
 def test_search_torrents_no_artist_id_in_torrent(
-    log: FakeLogger, client: FakeRedactedClient, album: FakeAlbum
+    log: FakeLogger, client: FakeClient, album: FakeAlbum
 ) -> None:
     """Test handling case where torrent has no artist ID for lookup."""
     # Create a torrent with no artist ID
@@ -479,7 +479,7 @@ def test_search_torrents_no_artist_id_in_torrent(
 
 
 def test_search_torrents_no_match(
-    log: FakeLogger, client: FakeRedactedClient, album: FakeAlbum
+    log: FakeLogger, client: FakeClient, album: FakeAlbum
 ) -> None:
     """Test searching for torrents with no match."""
     # Set up test response with no matching groups
@@ -491,7 +491,7 @@ def test_search_torrents_no_match(
 
 
 def test_search_torrents_with_error(
-    log: FakeLogger, client: FakeRedactedClient, album: FakeAlbum
+    log: FakeLogger, client: FakeClient, album: FakeAlbum
 ) -> None:
     """Test searching for torrents with an error."""
     # Set up test response with an error
@@ -504,7 +504,7 @@ def test_search_torrents_with_error(
 
 def test_search_torrents_with_variants(
     log: FakeLogger,
-    client: FakeRedactedClient,
+    client: FakeClient,
     test_torrent: RedSearchTorrent,
     test_artist_group: RedArtistTorrentGroup,
 ) -> None:

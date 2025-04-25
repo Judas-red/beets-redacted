@@ -12,7 +12,7 @@ from .http import HTTPClient
 from .types import RedAction, RedArtistResponse, RedSearchResponse
 
 
-class RedactedClient:
+class Client:
     """Client for interacting with the Redacted private tracker."""
 
     def __init__(self, api_key: str, http_client: HTTPClient, log: logging.Logger) -> None:
@@ -60,7 +60,7 @@ class RedactedClient:
 
         return data
 
-    def browse(self, query: str) -> RedSearchResponse:
+    def search(self, query: str) -> RedSearchResponse:
         """Search for torrents on Redacted.
 
         Args:
