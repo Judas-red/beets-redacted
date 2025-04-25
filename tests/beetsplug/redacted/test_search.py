@@ -24,12 +24,7 @@ from beetsplug.redacted.types import (
     RedSearchResults,
     RedSearchTorrent,
 )
-from beetsplug.redacted.utils.test_utils import (
-    FakeAlbum,
-    FakeLibrary,
-    FakeLogger,
-    FakeClient,
-)
+from beetsplug.redacted.utils.test_utils import FakeAlbum, FakeClient, FakeLibrary, FakeLogger
 
 TEST_ARTIST_ID = 1
 TEST_GROUP_ID = 2
@@ -229,9 +224,7 @@ def _make_test_group(
     )
 
 
-def _setup_search_responses(
-    client: FakeClient, query: str, groups: list[RedSearchResult]
-) -> None:
+def _setup_search_responses(client: FakeClient, query: str, groups: list[RedSearchResult]) -> None:
     """Set up search responses for the client.
 
     Args:
@@ -478,9 +471,7 @@ def test_search_torrents_no_artist_id_in_torrent(
     assert len(client.artist_queries) == 0
 
 
-def test_search_torrents_no_match(
-    log: FakeLogger, client: FakeClient, album: FakeAlbum
-) -> None:
+def test_search_torrents_no_match(log: FakeLogger, client: FakeClient, album: FakeAlbum) -> None:
     """Test searching for torrents with no match."""
     # Set up test response with no matching groups
     _setup_search_responses(client, f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}", [])
@@ -490,9 +481,7 @@ def test_search_torrents_no_match(
     assert result is None
 
 
-def test_search_torrents_with_error(
-    log: FakeLogger, client: FakeClient, album: FakeAlbum
-) -> None:
+def test_search_torrents_with_error(log: FakeLogger, client: FakeClient, album: FakeAlbum) -> None:
     """Test searching for torrents with an error."""
     # Set up test response with an error
     client.error_queries.add(f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}")

@@ -10,11 +10,11 @@ from beetsplug.redacted.command import RedactedCommand
 from beetsplug.redacted.search import BeetsRedFields
 from beetsplug.redacted.utils.test_utils import (
     FakeAlbum,
+    FakeClient,
     FakeCommandOpts,
     FakeConfig,
     FakeLibrary,
     FakeLogger,
-    FakeClient,
 )
 
 

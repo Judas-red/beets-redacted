@@ -6,7 +6,7 @@ Provides metadata matches for the autotagger from Redacted's API.
 import logging
 from typing import Optional
 
-from beets.library import Album, Item
+from beets.library import Album, Item  # type: ignore[import-untyped]
 
 from beetsplug.redacted import client
 from beetsplug.redacted.utils.search_utils import normalize_query
@@ -52,12 +52,11 @@ def candidates(
         # Convert the search results to Beets Album objects
         albums = []
         for result in response.response.results:
-            album: Album = Album()
-            album.red_groupid = result.groupId
-            album.albumartist = result.artist
-            album.album = result.groupName
-            album.year = result.groupYear
-            albums.append(album)
+            candidate = Album()
+            candidate.albumartist = result.artist
+            candidate.album = result.groupName
+            candidate.year = result.groupYear
+            albums.append(candidate)
 
         return albums
 

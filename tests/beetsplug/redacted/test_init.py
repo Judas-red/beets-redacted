@@ -10,10 +10,10 @@ from beetsplug.redacted import RedactedPlugin
 from beetsplug.redacted.types import BeetsRedFields
 from beetsplug.redacted.utils.test_utils import (
     FakeAlbum,
+    FakeClient,
     FakeConfig,
     FakeLibrary,
     FakeLogger,
-    FakeClient,
 )
 
 

@@ -3,18 +3,19 @@
 
 import time
 from pkgutil import extend_path
-from typing import Union
+from typing import Optional, Union
 
 import frozendict
 from beets.dbcore import types as dbtypes  # type: ignore[import-untyped]
 from beets.importer import ImportTask  # type: ignore[import-untyped]
-from beets.library import Library  # type: ignore[import-untyped]
+from beets.library import Album, Item, Library  # type: ignore[import-untyped]
 from beets.plugins import BeetsPlugin  # type: ignore[import-untyped]
 from beets.ui import UserError  # type: ignore[import-untyped]
 
 from beetsplug.redacted.client import Client
 from beetsplug.redacted.command import RedactedCommand
 from beetsplug.redacted.http import CachedRequestsClient, HTTPClient
+from beetsplug.redacted.metadata import candidates
 from beetsplug.redacted.search import search
 
 __path__ = extend_path(__path__, __name__)
@@ -88,6 +89,8 @@ class RedactedPlugin(BeetsPlugin):
     def import_stage(self, _: Library, task: ImportTask) -> bool:
         """Process an album during import.
 
+        Adds Redacted metadata to the album.
+
         Args:
             _: Library instance
             album: Album instance
@@ -127,3 +130,15 @@ class RedactedPlugin(BeetsPlugin):
 
         client = Client(api_key, self._http_client, self._log)
         return [RedactedCommand(self.config, self._log, client)]
+
+    def candidates(
+        self,
+        items: list[Item],
+        artist: str,
+        album: str,
+        va_likely: bool,
+        extra_tags: Optional[dict[str, str]] = None,
+    ) -> list[Album]:
+        return candidates(
+            self.client, self.log, items, artist, album, va_likely, extra_tags=extra_tags
+        )
