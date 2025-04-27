@@ -1,9 +1,11 @@
 """Module for searching and matching albums against Redacted torrents."""
 
 import dataclasses
+import functools
 import itertools
 import logging
-from typing import Union
+from collections.abc import Generator, Iterable
+from typing import Callable, Optional, Union
 
 from beets.library import Album  # type: ignore[import-untyped]
 from pydantic import ValidationError
@@ -18,24 +20,126 @@ from beetsplug.redacted.types import (
     RedArtistResponseResults,
     RedArtistTorrent,
     RedArtistTorrentGroup,
-    RedSearchResponse,
     RedSearchResult,
+    RedUserTorrent,
+    TorrentType,
 )
 from beetsplug.redacted.utils.search_utils import normalize_query
 
 
-def torrent_group_matchable(group: RedSearchResult) -> Union[Matchable, None]:
-    """Extract normalized fields from a Redacted torrent group.
+@dataclasses.dataclass
+class RedTorrent:
+    artist_id: Optional[int] = None
+    artist: Optional[str] = None
+
+    group_id: Optional[int] = None
+    group: Optional[str] = None
+    year: Optional[int] = None
+
+    torrent_id: Optional[int] = None
+    edition_id: Optional[int] = None
+    remastered: Optional[bool] = None
+    remaster_year: Optional[int] = None
+    remaster_catalogue_number: Optional[str] = None
+    remaster_title: Optional[str] = None
+    media: Optional[str] = None
+    encoding: Optional[str] = None
+    format: Optional[str] = None
+    has_log: Optional[bool] = None
+    log_score: Optional[int] = None
+    has_cue: Optional[bool] = None
+    scene: Optional[bool] = None
+    vanity_house: Optional[bool] = None
+    file_count: Optional[int] = None
+    torrent_time: Optional[str] = None
+    size: Optional[int] = None
+    snatches: Optional[int] = None
+    seeders: Optional[int] = None
+    leechers: Optional[int] = None
+    is_freeleech: Optional[bool] = None
+    is_neutral_leech: Optional[bool] = None
+    is_freeload: Optional[bool] = None
+    is_personal_freeleech: Optional[bool] = None
+    trumpable: Optional[bool] = None
+    can_use_token: Optional[bool] = None
+
+    tags: Optional[list[str]] = None
+    bookmarked: Optional[bool] = None
+    release_type: Optional[str] = None
+    group_time: Optional[int] = None
+
+    @classmethod
+    def from_search_result(cls, result: RedSearchResult) -> Generator["RedTorrent", None, None]:
+        base = cls(
+            group_id=result.groupId,
+            group=result.groupName,
+            artist=result.artist,
+            tags=result.tags,
+            bookmarked=result.bookmarked,
+            vanity_house=result.vanityHouse,
+            year=result.groupYear,
+            release_type=result.releaseType,
+            group_time=result.groupTime,
+        )
+        if result.torrents is None:
+            yield base
+        else:
+            for torrent in result.torrents:
+                copy = dataclasses.replace(
+                    base,
+                    torrent_id=torrent.torrentId,
+                    artist_id=torrent.artists[0].id if torrent.artists else None,
+                    edition_id=torrent.editionId,
+                    remastered=torrent.remastered,
+                    remaster_year=torrent.remasterYear,
+                    remaster_catalogue_number=torrent.remasterCatalogueNumber,
+                    remaster_title=torrent.remasterTitle,
+                    media=torrent.media,
+                    encoding=torrent.encoding,
+                    format=torrent.format,
+                    has_log=torrent.hasLog,
+                    log_score=torrent.logScore,
+                    has_cue=torrent.hasCue,
+                    scene=torrent.scene,
+                    vanity_house=torrent.vanityHouse,
+                    file_count=torrent.fileCount,
+                    torrent_time=torrent.time,
+                    size=torrent.size,
+                    snatches=torrent.snatches,
+                    seeders=torrent.seeders,
+                    leechers=torrent.leechers,
+                    is_freeleech=torrent.isFreeleech,
+                    is_neutral_leech=torrent.isNeutralLeech,
+                    is_freeload=torrent.isFreeload,
+                    is_personal_freeleech=torrent.isPersonalFreeleech,
+                    trumpable=torrent.trumpable,
+                    can_use_token=torrent.canUseToken,
+                )
+                yield copy
+
+    @classmethod
+    def from_user_torrent(cls, torrent: RedUserTorrent) -> "RedTorrent":
+        return cls(
+            artist_id=torrent.artistId,
+            artist=torrent.artistName,
+            group_id=torrent.groupId,
+            group=torrent.name,
+            torrent_id=torrent.torrentId,
+        )
+
+
+def red_torrent_matchable(torrent: RedTorrent) -> Optional[Matchable]:
+    """Extract normalized fields from a Redacted torrent.
 
     Args:
-        group: Group to extract fields from
+        torrent: Torrent to extract fields from
 
     Returns:
         MatchableFields object with normalized fields
     """
-    if not group.artist or not group.groupName:
+    if not torrent.artist or not torrent.group:
         return None
-    return Matchable(artist=group.artist, title=group.groupName, year=group.groupYear)
+    return Matchable(artist=torrent.artist, title=torrent.group, year=torrent.year)
 
 
 def artist_torrent_group_matchable(
@@ -56,8 +160,8 @@ def artist_torrent_group_matchable(
 
 
 def match_album(
-    album: Album, results: RedSearchResponse, log: logging.Logger, min_score: float
-) -> tuple[Union[RedSearchResult, None], float]:
+    album: Album, results: Iterable[RedTorrent], log: logging.Logger
+) -> tuple[Optional[RedTorrent], float]:
     """Check if an album exists in search results.
 
     The matching algorithm uses a weighted scoring system:
@@ -73,7 +177,6 @@ def match_album(
         album: Beets album to match
         results: Search results from Redacted API
         log: Logger instance for logging messages
-        min_score: Minimum similarity score to consider a match (0-1)
 
     Returns:
         Tuple of (group, torrent) if found with sufficient similarity,
@@ -83,33 +186,24 @@ def match_album(
     # Extract album fields for matching
     album_fields = extract_album_fields(album)
 
-    # Get all groups from the response
-    response = results.response
-    groups = response.results
-    if not groups:
-        log.debug("No groups found in search results")
-        return None, 0.0
-
     # Find the best match among all groups
-    best_match: Union[RedSearchResult, None] = None
+    best_match: Union[RedTorrent, None] = None
     best_match_score: float = 0.0
     weights = {"artist": 0.5, "title": 0.4, "year": 0.1}
 
     # Score all the groups, keeping track of the best match
-    for group in groups:
-        if not group.torrents:
-            log.debug("Group {:d} has no torrents, skipping", group.groupId)
-            continue
-
-        group_fields = torrent_group_matchable(group)
+    for torrent in results:
+        group_fields = red_torrent_matchable(torrent)
         if not group_fields:
-            log.debug("Could not extract matching fields from group {:d}, skipping", group.groupId)
+            log.debug(
+                "Could not extract matching fields from torrent {:d}, skipping", torrent.torrent_id
+            )
             continue
 
         match_result = score_match(album_fields, group_fields, log, weights)
 
         if match_result.total_score > best_match_score:
-            best_match = group
+            best_match = torrent
             best_match_score = match_result.total_score
 
     if not best_match:
@@ -121,26 +215,13 @@ def match_album(
         )
         return None, 0.0
 
-    if best_match_score < min_score:
-        log.debug(
-            "Best match for {} - {} ({:d}) was {} - {} (score: {:.2f}, below threshold {:.2f})",
-            album.albumartist,
-            album.album,
-            album.year,
-            best_match.artist,
-            best_match.groupName,
-            best_match_score,
-            min_score,
-        )
-        return None, 0.0
-
     log.debug(
         "Found match for {} - {} ({:d}): {} - {} (score: {:.2f})",
         album_fields.artist,
         album_fields.title,
         album_fields.year,
         best_match.artist,
-        best_match.groupName,
+        best_match.group,
         best_match_score,
     )
     return best_match, best_match_score
@@ -242,34 +323,6 @@ def match_artist_album(
     return best_group, best_torrent
 
 
-def get_artist_id_from_red_group(group: RedSearchResult, log: logging.Logger) -> Union[int, None]:
-    """Extract artist ID from a torrent.
-
-    Args:
-        group: Group containing the torrent
-        log: Logger instance for logging messages
-
-    Returns:
-        Artist ID if found, None otherwise
-    """
-    if not group.torrents:
-        log.debug("Group {0:d} has no torrents, cannot determine artist id.", group.groupId)
-        return None
-
-    try:
-        torrent = group.torrents[0]
-        if not torrent.artists:
-            log.debug(
-                "Torrent {0:d} has no artists, cannot determine artist id.", torrent.torrentId
-            )
-            return None
-
-        return torrent.artists[0].id
-    except (IndexError, AttributeError) as e:
-        log.debug("Error extracting artist ID from group {0:d}: {1}", group.groupId, e)
-        return None
-
-
 def beets_fields_from_artist_torrent_groups(
     artist: RedArtistResponseResults,
     group: RedArtistTorrentGroup,
@@ -336,6 +389,37 @@ def beets_fields_from_artist_torrent_groups(
     return fields
 
 
+def best_match_from_snatched(
+    client: Client, album: Album, log: logging.Logger
+) -> tuple[Optional[RedTorrent], float]:
+    # Look up the user's snatched torrents. We will always add these in to the set of torrents
+    # to match.
+    user_response = client.user(TorrentType.SNATCHED)
+    snatched_torrents = [
+        RedTorrent.from_user_torrent(torrent) for torrent in user_response.response.snatched
+    ]
+
+    # Is there a good match in the user's snatched torrents?
+    return match_album(album, snatched_torrents, log)
+
+
+def best_match_from_search(
+    client: Client, album: Album, c_artist: str, c_album: str, log: logging.Logger
+) -> tuple[Optional[RedTorrent], float]:
+    search_query = normalize_query(c_artist, c_album, log)
+    if not search_query:
+        log.debug("Could not construct search query for {0} - {1}", c_artist, c_album)
+        return None, 0.0
+
+    log.debug("Searching for torrents with query: {0}", search_query)
+    results = [
+        RedTorrent.from_search_result(group)
+        for group in client.search(search_query).response.results
+    ]
+
+    return match_album(album, itertools.chain.from_iterable(results), log)
+
+
 def search(
     album: Album, client: Client, log: logging.Logger, min_score: float
 ) -> Union[BeetsRedFields, None]:
@@ -353,36 +437,47 @@ def search(
     Returns:
         Dictionary of fields to update on the album if match found, None otherwise
     """
-    # Step 1: Find the best initial match using the browse API
-    best_search_match = None
-    best_match_score = 0.0
-    for artist_c, album_c in itertools.product(
-        (album.albumartist, album.albumartist_credit, album.albumartist_sort, album.albumartists),
-        (album.album, album.albumdisambig),
-    ):
-        search_query = normalize_query(artist_c, album_c, log)
-        if not search_query:
-            log.debug(
-                "Could not construct search query for {0} - {1}", album.albumartist, album.album
-            )
-            continue
+    # Find the best matching torrent, from the user's snatches or search, which we'll then use
+    # to look up the artist and get the best match from the artist's discography.
 
+    def matchers() -> Generator[Callable[[], tuple[Optional[RedTorrent], float]], None, None]:
+        # First try to match from the user's snatched torrents
+        yield functools.partial(best_match_from_snatched, client, album, log)
+
+        # Then try to match from the search results, using variations of the artist and album names,
+        # starting with the most likely.
+        for c_artist, c_album in itertools.product(
+            (
+                album.albumartist,
+                album.albumartist_credit,
+                album.albumartist_sort,
+                album.albumartists,
+            ),
+            (album.album, album.albumdisambig),
+        ):
+            yield functools.partial(best_match_from_search, client, album, c_artist, c_album, log)
+
+    best_match = None
+    best_match_score = 0.0
+    for matcher in matchers():
         try:
-            log.debug("Searching for torrents with query: {0}", search_query)
-            results = client.search(search_query)
+            match, score = matcher()
         except (RedactedError, RateLimitException) as e:
             log.debug(
-                "Error searching for torrents for {0} - {1}: {2}", album.albumartist, album.album, e
+                "Error retrieving torrents for artist '{0}', album '{1}' "
+                "with matcher function {2}: {3}",
+                album.albumartist,
+                album.album,
+                matcher,
+                e,
             )
             continue
 
-        search_match, match_score = match_album(album, results, log, min_score)
-        if search_match and match_score > best_match_score:
-            best_match_score = match_score
-            best_search_match = search_match
-            break
+        if match and score > best_match_score:
+            best_match_score = score
+            best_match = match
 
-    if not best_search_match:
+    if not best_match or best_match_score < min_score:
         log.debug(
             "No good search result for {0} - {1} ({2:d}) (min {3:.2f}, best was {4:.2f})",
             album.get("albumartist"),
@@ -403,12 +498,12 @@ def search(
         )
 
     # Extract artist ID for detailed lookup
-    artist_id = get_artist_id_from_red_group(best_search_match, log)
+    artist_id = best_match.artist_id
     if not artist_id:
         # No artist ID means we can't do the second step of the lookup
         # According to requirements, we should return None in this case
         log.debug(
-            "No artist ID found in search result torrent group {0:d}", best_search_match.groupId
+            "No artist ID found in snatches or search results, best match was {0}", best_match
         )
         return None
 

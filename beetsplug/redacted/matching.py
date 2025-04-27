@@ -76,7 +76,7 @@ def extract_album_fields(album: Album) -> Matchable:
     Returns:
         MatchableFields object with normalized fields
     """
-    assert isinstance(album, Album)
+    assert isinstance(album, Album), f"album must be a Beets Album, got {type(album)}"
     if "year" in album:
         year = album.get("year", None)
         if year == 0:

@@ -2,8 +2,8 @@
 
 import dataclasses
 import itertools
-from enum import Enum
-from typing import Callable, Iterable, List, Optional, Union
+from collections.abc import Iterable
+from typing import Optional, Union
 
 import pytest
 from pydantic import ConfigDict, Field
@@ -12,10 +12,10 @@ from pydantic.dataclasses import dataclass
 from beetsplug.redacted.matching import Matchable
 from beetsplug.redacted.search import (
     BeetsRedFields,
-    match_album,
+    RedTorrent,
     match_artist_album,
+    red_torrent_matchable,
     search,
-    torrent_group_matchable,
 )
 from beetsplug.redacted.types import (
     RedArtist,
@@ -193,10 +193,7 @@ def make_artist_group(
 ) -> RedArtistTorrentGroup:
     """Create a test artist group for testing."""
     return RedArtistTorrentGroup(
-        groupId=group_id,
-        groupName=name,
-        groupYear=year,
-        torrent=list(torrents),
+        groupId=group_id, groupName=name, groupYear=year, torrent=list(torrents)
     )
 
 
@@ -373,19 +370,13 @@ def test_all_beets_fields_mapped() -> None:
     ],
 )
 def test_extract_group_fields(
-    test_torrent: RedSearchTorrent,
-    artist: str,
-    name: str,
-    year: Optional[int],
-    expected_fields: Optional[Matchable],
+    artist: str, name: str, year: Optional[int], expected_fields: Optional[Matchable]
 ) -> None:
     """Test extracting fields from a group with various field combinations."""
     # Create group with provided fields
-    group = make_group(
-        artist=artist, name=name, year=year, torrent=test_torrent, group_id=TEST_GROUP_ID
-    )
+    group = RedTorrent(artist=artist, group=name, year=year)
 
-    fields = torrent_group_matchable(group)
+    fields = red_torrent_matchable(group)
     assert fields == expected_fields
 
 
@@ -535,53 +526,6 @@ def test_beets_fields_from_artist_torrent_groups(
     # Extract fields
     red_fields = beets_fields_from_artist_torrent_groups(artist, group, torrent, log)
     assert red_fields == expected
-
-
-@pytest.mark.parametrize(
-    "group_config, torrent_config, expected_result",
-    [
-        pytest.param(
-            {
-                "groupId": TEST_GROUP_ID,
-                "groupName": TEST_ALBUM_NAME,
-                "artist": TEST_ARTIST_NAME,
-                "torrents": [],
-            },
-            {},
-            None,
-            id="test_group_with_no_torrents",
-        ),
-        pytest.param(
-            {"groupId": TEST_GROUP_ID, "groupName": TEST_ALBUM_NAME, "artist": TEST_ARTIST_NAME},
-            {"torrentId": TEST_TORRENT_ID, "editionId": 1},
-            None,
-            id="test_torrent_with_no_artists",
-        ),
-        pytest.param(
-            {"groupId": TEST_GROUP_ID, "groupName": TEST_ALBUM_NAME, "artist": TEST_ARTIST_NAME},
-            {"torrentId": TEST_TORRENT_ID, "editionId": 1, "artists": []},
-            None,
-            id="test_torrent_with_empty_artists",
-        ),
-    ],
-)
-def test_get_artist_id_from_red_group_exceptions(
-    log: FakeLogger, group_config: dict, torrent_config: dict, expected_result: Union[int, None]
-) -> None:
-    """Test exception handling in get_artist_id_from_red_group with parameterized inputs."""
-    from beetsplug.redacted.search import get_artist_id_from_red_group
-
-    # If there are torrents in config, create and add the torrent
-    if "torrents" not in group_config:
-        torrent = RedSearchTorrent(**torrent_config)
-        group_config["torrents"] = [torrent]
-
-    # Create the group with the config
-    group = RedSearchResult(**group_config)
-
-    # Call the function
-    artist_id = get_artist_id_from_red_group(group, log)
-    assert artist_id == expected_result
 
 
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
@@ -920,8 +864,11 @@ def test_search(log: FakeLogger, description: str, parameters: TestSearchParams)
                 continue
 
             if not hasattr(result, field):
-                raise ValueError(f"{description}: expected field {field} not found in result: {result}")
+                raise ValueError(
+                    f"{description}: expected field {field} not found in result: {result}"
+                )
 
             actual_value = getattr(result, field)
-            assert actual_value == expected_value, f"{description}: expected {expected_value} for field {field}, got {actual_value}"
-
+            assert (
+                actual_value == expected_value
+            ), f"{description}: expected {expected_value} for field {field}, got {actual_value}"
