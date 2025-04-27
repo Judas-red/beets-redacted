@@ -69,7 +69,7 @@ import copy
 import logging
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Protocol, Union
+from typing import TYPE_CHECKING, Any, Optional, Protocol, Union
 
 import requests
 from beets import library  # type: ignore[import-untyped]
@@ -83,6 +83,9 @@ from beetsplug.redacted.types import (
     RedArtistResponseResults,
     RedSearchResponse,
     RedSearchResults,
+    RedUserResponse,
+    RedUserResponseResults,
+    TorrentType,
 )
 
 # Forward declaration for type checking
@@ -530,6 +533,7 @@ class FakeClient(Client):
         """Initialize the fake client."""
         self.search_responses: dict[str, RedSearchResponse] = {}
         self.artist_responses: dict[int, RedArtistResponse] = {}
+        self.user_response: Optional[RedUserResponse] = None
         self.queries: list[str] = []
         self.error_queries: set[str] = set()
         self.rate_limit_queries: set[str] = set()
@@ -593,6 +597,13 @@ class FakeClient(Client):
             )
 
         return self.artist_responses[artist_id]
+
+    def user(self, _: TorrentType, limit: int = 500, offset: int = 0) -> RedUserResponse:
+        """Fake implementation of user torrents lookup (snatched, seeding, etc)."""
+        if self.user_response:
+            return self.user_response
+
+        raise RedactedError("Fake user lookup failure")
 
 
 class FakeCommandOpts:

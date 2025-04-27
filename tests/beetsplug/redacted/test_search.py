@@ -2,10 +2,14 @@
 
 import dataclasses
 import itertools
-from typing import Union
+from enum import Enum
+from typing import Callable, Iterable, List, Optional, Union
 
 import pytest
+from pydantic import ConfigDict, Field
+from pydantic.dataclasses import dataclass
 
+from beetsplug.redacted.matching import Matchable
 from beetsplug.redacted.search import (
     BeetsRedFields,
     match_album,
@@ -23,6 +27,9 @@ from beetsplug.redacted.types import (
     RedSearchResult,
     RedSearchResults,
     RedSearchTorrent,
+    RedUserResponse,
+    RedUserResponseResults,
+    RedUserTorrent,
 )
 from beetsplug.redacted.utils.test_utils import FakeAlbum, FakeClient, FakeLibrary, FakeLogger
 
@@ -30,8 +37,8 @@ TEST_ARTIST_ID = 1
 TEST_GROUP_ID = 2
 TEST_TORRENT_ID = 3
 TEST_ALBUM_ID = 4
-TEST_ARTIST_NAME = "Test Artist"
-TEST_ALBUM_NAME = "Test Album"
+TEST_ARTIST_NAME = "Artist"
+TEST_ALBUM_NAME = "Album"
 TEST_ALBUM_YEAR = 2020
 
 
@@ -47,20 +54,27 @@ def client() -> FakeClient:
     return FakeClient()
 
 
-@pytest.fixture
-def album() -> FakeAlbum:
+def make_album(
+    id: int = 0,
+    artist: str = TEST_ARTIST_NAME,
+    artist_sort: str = TEST_ARTIST_NAME,
+    name: str = TEST_ALBUM_NAME,
+    year: int = TEST_ALBUM_YEAR,
+    media: str = "CD",
+    format: str = "FLAC",
+) -> FakeAlbum:
     """Create a test album for testing."""
     lib = FakeLibrary(
         [
             {
-                "id": TEST_ALBUM_ID,
-                "albumartist": TEST_ARTIST_NAME,
-                "albumartist_sort": "Artist, Test",
-                "album": TEST_ALBUM_NAME,
+                "id": id,
+                "albumartist": artist,
+                "albumartist_sort": artist_sort,
+                "album": name,
                 "albumdisambig": "The Great Test Album",
-                "year": TEST_ALBUM_YEAR,
-                "media": "CD",
-                "format": "FLAC",
+                "year": year,
+                "media": media,
+                "format": format,
             }
         ]
     )
@@ -68,7 +82,41 @@ def album() -> FakeAlbum:
 
 
 @pytest.fixture
-def test_torrent(artist_id: int = TEST_ARTIST_ID) -> RedSearchTorrent:
+def album() -> FakeAlbum:
+    """Create a test album for testing."""
+    return make_album()
+
+
+def make_user_torrent(
+    group_id: int = TEST_GROUP_ID,
+    group: str = TEST_ALBUM_NAME,
+    artist: str = TEST_ARTIST_NAME,
+    artist_id: int = TEST_ARTIST_ID,
+    torrent_id: int = TEST_TORRENT_ID,
+) -> RedUserTorrent:
+    return RedUserTorrent(
+        groupId=group_id, name=group, torrentId=torrent_id, artistName=artist, artistId=artist_id
+    )
+
+
+def make_user_response(
+    seeding: Iterable[RedUserTorrent] = tuple(),
+    leeching: Iterable[RedUserTorrent] = tuple(),
+    uploaded: Iterable[RedUserTorrent] = tuple(),
+    snatched: Iterable[RedUserTorrent] = tuple(),
+) -> RedUserResponse:
+    return RedUserResponse(
+        status="success",
+        response=RedUserResponseResults(
+            seeding=list(seeding),
+            leeching=list(leeching),
+            uploaded=list(uploaded),
+            snatched=list(snatched),
+        ),
+    )
+
+
+def make_test_torrent(artist_id: int = TEST_ARTIST_ID) -> RedSearchTorrent:
     """Create a test torrent for testing.
 
     Returns:
@@ -105,79 +153,66 @@ def test_torrent(artist_id: int = TEST_ARTIST_ID) -> RedSearchTorrent:
 
 
 @pytest.fixture
-def test_artist_torrent(
-    group_id: int = TEST_GROUP_ID, torrent_id: int = TEST_TORRENT_ID
+def test_torrent() -> RedSearchTorrent:
+    """Create a test torrent for testing."""
+    return make_test_torrent()
+
+
+def make_artist_torrent(
+    torrent_id: int = TEST_TORRENT_ID,
+    group_id: int = TEST_GROUP_ID,
+    media: Optional[str] = None,
+    format: Optional[str] = None,
+    encoding: Optional[str] = None,
+    remaster_year: Optional[int] = None,
+    remastered: Optional[bool] = None,
 ) -> RedArtistTorrent:
     """Create a test artist torrent for testing."""
     return RedArtistTorrent(
         id=torrent_id,
         groupId=group_id,
-        media="CD",
-        format="FLAC",
-        encoding="Lossless",
-        remasterYear=TEST_ALBUM_YEAR,
-        remastered=False,
-        remasterTitle="",
-        remasterRecordLabel="",
-        scene=False,
-        hasLog=True,
-        hasCue=True,
-        logScore=100,
-        fileCount=10,
-        size=1000000,
-        seeders=50,
-        leechers=10,
-        snatched=100,
-        time="2012-04-14 15:57:00",
+        media=media,
+        format=format,
+        encoding=encoding,
+        remasterYear=remaster_year,
+        remastered=remastered,
     )
 
 
 @pytest.fixture
-def test_artist_group(
-    test_artist_torrent: RedArtistTorrent, group_id: int = TEST_GROUP_ID
+def test_artist_torrent() -> RedArtistTorrent:
+    """Create a test artist torrent for testing."""
+    return make_artist_torrent()
+
+
+def make_artist_group(
+    group_id: int = TEST_GROUP_ID,
+    name: str = TEST_ALBUM_NAME,
+    year: int = TEST_ALBUM_YEAR,
+    torrents: Iterable[RedArtistTorrent] = tuple(),
 ) -> RedArtistTorrentGroup:
     """Create a test artist group for testing."""
     return RedArtistTorrentGroup(
         groupId=group_id,
-        groupName=TEST_ALBUM_NAME,
-        groupYear=TEST_ALBUM_YEAR,
-        groupRecordLabel="Test Label",
-        groupCatalogueNumber="TEST-001",
-        tags=["electronic", "test"],
-        releaseType=1,
-        groupVanityHouse=False,
-        hasBookmarked=False,
-        torrent=[test_artist_torrent],
+        groupName=name,
+        groupYear=year,
+        torrent=list(torrents),
     )
 
 
 @pytest.fixture
-def test_artist_response(
-    test_artist_group: RedArtistTorrentGroup, artist_id: int = TEST_ARTIST_ID
-) -> RedArtistResponse:
-    """Create a test artist response."""
-    return RedArtistResponse(
-        status="success",
-        response=RedArtistResponseResults(
-            id=artist_id,
-            name=TEST_ARTIST_NAME,
-            notificationsEnabled=False,
-            hasBookmarked=False,
-            image="https://example.com/artist.jpg",
-            body="Artist bio",
-            vanityHouse=False,
-            torrentgroup=[test_artist_group],
-            requests=[],
-        ),
-    )
+def test_artist_group() -> RedArtistTorrentGroup:
+    """Create a test artist group for testing."""
+    return make_artist_group()
 
 
-def _make_test_group(
+def make_group(
     group_id: int = TEST_GROUP_ID,
-    artist_id: int = TEST_ARTIST_ID,
     artist: str = TEST_ARTIST_NAME,
     name: str = TEST_ALBUM_NAME,
-    year: int = TEST_ALBUM_YEAR,
+    torrent_id: int = TEST_TORRENT_ID,
+    year: Optional[int] = TEST_ALBUM_YEAR,
+    artist_id: Optional[int] = TEST_ARTIST_ID,
     torrent: Union[RedSearchTorrent, None] = None,
 ) -> RedSearchResult:
     """Create a test group for testing.
@@ -194,7 +229,7 @@ def _make_test_group(
         Test group object
     """
     test_torrent = torrent or RedSearchTorrent(
-        torrentId=TEST_TORRENT_ID,
+        torrentId=torrent_id,
         editionId=1,
         remastered=False,
         media="CD",
@@ -224,43 +259,67 @@ def _make_test_group(
     )
 
 
-def _setup_search_responses(client: FakeClient, query: str, groups: list[RedSearchResult]) -> None:
+def make_search_response(groups: list[RedSearchResult]) -> RedSearchResponse:
     """Set up search responses for the client.
 
     Args:
-        client: The client to configure
-        query: The query to respond to
         groups: The groups to include in the response
     """
-    client.search_responses[query] = RedSearchResponse(
-        status="success", response=RedSearchResults(results=groups)
-    )
+    return RedSearchResponse(status="success", response=RedSearchResults(results=groups))
 
 
-def _setup_artist_response(
-    client: FakeClient,
+@pytest.fixture
+def test_search_responses() -> RedSearchResponse:
+    """Create a test search response."""
+    return make_search_response([make_group()])
+
+
+def make_artist_response(
     artist_id: int = TEST_ARTIST_ID,
-    artist_name: str = TEST_ARTIST_NAME,
-    torrent_groups: Union[list[RedArtistTorrentGroup], None] = None,
-) -> None:
+    name: str = TEST_ARTIST_NAME,
+    groups: Iterable[RedArtistTorrentGroup] = tuple(),
+) -> RedArtistResponse:
     """Set up artist response for the client.
 
     Args:
-        client: The client to configure
         artist_id: The artist ID to respond to
         artist_name: The artist name
         torrent_groups: The torrent groups to include in the response
     """
-    client.artist_responses[artist_id] = RedArtistResponse(
+    return RedArtistResponse(
         status="success",
         response=RedArtistResponseResults(
             id=artist_id,
-            name=artist_name,
+            name=name,
             notificationsEnabled=False,
             hasBookmarked=False,
-            torrentgroup=torrent_groups or [],
+            torrentgroup=list(groups),
             requests=[],
         ),
+    )
+
+
+@pytest.fixture
+def test_artist_response() -> RedArtistResponse:
+    """Create a test artist response."""
+    return make_artist_response()
+
+
+def make_beets_fields(
+    artist_id: int,
+    artist_name: str,
+    group_id: int,
+    group_name: str,
+    group_year: int,
+    torrent_id: int,
+) -> BeetsRedFields:
+    return BeetsRedFields(
+        red_artistid=artist_id,
+        red_groupid=group_id,
+        red_torrentid=torrent_id,
+        red_artist=artist_name,
+        red_groupname=group_name,
+        red_groupyear=group_year,
     )
 
 
@@ -292,319 +351,42 @@ def test_all_beets_fields_mapped() -> None:
         raise ValueError(f"BeetsRedFields without 'from' metadata: {unmapped_fields}")
 
 
-def test_match_album_exact_match(
-    log: FakeLogger, album: FakeAlbum, test_torrent: RedSearchTorrent
-) -> None:
-    """Test matching an album with exact match."""
-    # Create multiple groups with one exact match and others that are close
-    group1 = _make_test_group(
-        artist="Different Artist", name="Different Album", year=2020, torrent=test_torrent
-    )
-    group2 = _make_test_group(year=2020, torrent=test_torrent)  # Exact match
-    group3 = _make_test_group(
-        artist=TEST_ARTIST_NAME, name="Test Album 2", year=2019, torrent=test_torrent
-    )
-
-    results = RedSearchResponse(
-        status="success", response=RedSearchResults(results=[group1, group2, group3])
-    )
-    match, score = match_album(album, results, log, min_score=0.75)
-    assert match is not None
-
-    # Now match only returns the group, not a tuple of (group, torrent)
-    assert match.groupId == TEST_GROUP_ID
-    assert match.artist == TEST_ARTIST_NAME
-    assert match.groupName == TEST_ALBUM_NAME
-    assert score > 0
-
-
-def test_search_torrents_with_artist_lookup(
-    log: FakeLogger,
-    client: FakeClient,
-    album: FakeAlbum,
+@pytest.mark.parametrize(
+    "artist,name,year,expected_fields",
+    [
+        pytest.param(
+            TEST_ARTIST_NAME,
+            TEST_ALBUM_NAME,
+            TEST_ALBUM_YEAR,
+            Matchable(artist=TEST_ARTIST_NAME, title=TEST_ALBUM_NAME, year=TEST_ALBUM_YEAR),
+            id="valid_group",
+        ),
+        pytest.param("", TEST_ALBUM_NAME, TEST_ALBUM_YEAR, None, id="missing_artist"),
+        pytest.param(TEST_ARTIST_NAME, "", TEST_ALBUM_YEAR, None, id="missing_name"),
+        pytest.param(
+            TEST_ARTIST_NAME,
+            TEST_ALBUM_NAME,
+            None,
+            Matchable(artist=TEST_ARTIST_NAME, title=TEST_ALBUM_NAME, year=None),
+            id="missing_year",
+        ),
+    ],
+)
+def test_extract_group_fields(
     test_torrent: RedSearchTorrent,
-    test_artist_group: RedArtistTorrentGroup,
+    artist: str,
+    name: str,
+    year: Optional[int],
+    expected_fields: Optional[Matchable],
 ) -> None:
-    """Test searching for torrents with artist lookup flow."""
-    # Set up the browse response with artist ID in the torrent
-    initial_match = _make_test_group(
-        artist=TEST_ARTIST_NAME,
-        name=TEST_ALBUM_NAME,
-        year=TEST_ALBUM_YEAR,
-        torrent=test_torrent,
-        group_id=100,
-        artist_id=TEST_ARTIST_ID,
+    """Test extracting fields from a group with various field combinations."""
+    # Create group with provided fields
+    group = make_group(
+        artist=artist, name=name, year=year, torrent=test_torrent, group_id=TEST_GROUP_ID
     )
-
-    _setup_search_responses(client, f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}", [initial_match])
-    _setup_artist_response(client, TEST_ARTIST_ID, TEST_ARTIST_NAME, [test_artist_group])
-
-    # Search for torrents - should use both browse and get_artist
-    result = search(album, client, log, min_score=0.75)
-
-    # Verify the results
-    assert result is not None
-    assert result.red_artistid == TEST_ARTIST_ID
-    assert result.red_groupid == TEST_GROUP_ID
-    assert result.red_torrentid == TEST_TORRENT_ID
-    assert result.red_media == "CD"
-    assert result.red_format == "FLAC"
-
-    # Verify both API methods were called
-    assert f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}" in client.queries
-    assert TEST_ARTIST_ID in client.artist_queries
-
-
-def test_search_torrents_artist_lookup_better_match(
-    log: FakeLogger,
-    client: FakeClient,
-    album: FakeAlbum,
-    test_torrent: RedSearchTorrent,
-    test_artist_torrent: RedArtistTorrent,
-) -> None:
-    """Test that artist lookup finds a better match than initial browse."""
-    # Set up test response for initial browse search with a so-so match
-    initial_match = _make_test_group(
-        artist=TEST_ARTIST_NAME,
-        name=f"{TEST_ALBUM_NAME} (Deluxe)",
-        year=TEST_ALBUM_YEAR,
-        torrent=test_torrent,
-        group_id=3,
-        artist_id=TEST_ARTIST_ID,
-    )
-    _setup_search_responses(client, f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}", [initial_match])
-
-    # Create a better match in the artist response
-    initial_group = RedArtistTorrentGroup(
-        groupId=3,
-        groupName=f"{TEST_ALBUM_NAME} (Deluxe)",
-        groupYear=TEST_ALBUM_YEAR,
-        torrent=[test_artist_torrent],
-    )
-    better_match_torrent = RedArtistTorrent(
-        id=TEST_TORRENT_ID, groupId=TEST_GROUP_ID, media="CD", format="FLAC", encoding="Lossless"
-    )
-    better_match_group = RedArtistTorrentGroup(
-        groupId=TEST_GROUP_ID,
-        groupName=TEST_ALBUM_NAME,
-        groupYear=TEST_ALBUM_YEAR,
-        torrent=[better_match_torrent],
-    )
-    _setup_artist_response(
-        client, TEST_ARTIST_ID, TEST_ARTIST_NAME, [better_match_group, initial_group]
-    )
-
-    # Search for torrents
-    result = search(album, client, log, min_score=0.75)
-
-    # Verify the results - should find the exact match from artist's discography
-    assert result is not None
-    assert result.red_groupid == TEST_GROUP_ID
-    assert result.red_torrentid == TEST_TORRENT_ID
-
-
-def test_search_torrents_artist_lookup_failed(
-    log: FakeLogger, client: FakeClient, album: FakeAlbum, test_torrent: RedSearchTorrent
-) -> None:
-    """Test handling case where artist lookup fails but we still use initial match."""
-    # Set up test response for initial browse search
-    initial_match = _make_test_group(
-        artist=TEST_ARTIST_NAME,
-        name=TEST_ALBUM_NAME,
-        year=TEST_ALBUM_YEAR,
-        torrent=test_torrent,
-        group_id=1,
-        artist_id=TEST_ARTIST_ID,
-    )
-
-    # Setup browse response
-    _setup_search_responses(client, f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}", [initial_match])
-
-    # Configure client to return error for artist lookup
-    client.error_artist_queries = {TEST_ARTIST_ID}
-
-    # Search for torrents - should use browse and attempt artist lookup
-    result = search(album, client, log, min_score=0.75)
-
-    # Should return None when artist lookup fails (per project requirements)
-    assert result is None
-
-    # Verify both API methods were attempted
-    assert f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}" in client.queries
-    assert TEST_ARTIST_ID in client.artist_queries
-
-
-def test_search_torrents_no_artist_id_in_torrent(
-    log: FakeLogger, client: FakeClient, album: FakeAlbum
-) -> None:
-    """Test handling case where torrent has no artist ID for lookup."""
-    # Create a torrent with no artist ID
-    torrent_without_artist = RedSearchTorrent(
-        artists=[],
-        torrentId=TEST_TORRENT_ID,
-        editionId=1,
-        media="CD",
-        format="FLAC",
-        encoding="Lossless",
-    )
-
-    # Set up test response for initial browse search
-    initial_match = _make_test_group(
-        artist=TEST_ARTIST_NAME,
-        name=TEST_ALBUM_NAME,
-        year=TEST_ALBUM_YEAR,
-        torrent=torrent_without_artist,
-        group_id=TEST_GROUP_ID,
-    )
-
-    # Setup browse response
-    _setup_search_responses(client, f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}", [initial_match])
-
-    # Search for torrents - should return None because artist ID is required
-    result = search(album, client, log, min_score=0.75)
-
-    # Should return None when no artist ID is available
-    assert result is None
-
-    # Verify only browse was called, not artist lookup
-    assert f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}" in client.queries
-    assert len(client.artist_queries) == 0
-
-
-def test_search_torrents_no_match(log: FakeLogger, client: FakeClient, album: FakeAlbum) -> None:
-    """Test searching for torrents with no match."""
-    # Set up test response with no matching groups
-    _setup_search_responses(client, f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}", [])
-
-    # Search for torrents - should return None
-    result = search(album, client, log, min_score=0.75)
-    assert result is None
-
-
-def test_search_torrents_with_error(log: FakeLogger, client: FakeClient, album: FakeAlbum) -> None:
-    """Test searching for torrents with an error."""
-    # Set up test response with an error
-    client.error_queries.add(f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}")
-
-    # Search for torrents with error - should return None
-    result = search(album, client, log, min_score=0.75)
-    assert result is None
-
-
-def test_search_torrents_with_variants(
-    log: FakeLogger,
-    client: FakeClient,
-    test_torrent: RedSearchTorrent,
-    test_artist_group: RedArtistTorrentGroup,
-) -> None:
-    """Test searching for torrents with artist/album variants."""
-    # Create a test album with variants
-    lib = FakeLibrary(
-        [
-            {
-                "id": TEST_ALBUM_ID,
-                "albumartist": "Artist, Test",
-                "albumartist_sort": "Test Artist",
-                "album": "Test Album",
-                "albumdisambig": "Album, Test (2020)",
-                "year": TEST_ALBUM_YEAR,
-            }
-        ]
-    )
-    album = lib.albums()[0]
-
-    # Set up browse result with artist ID for lookup
-    exact_match = _make_test_group(
-        artist=TEST_ARTIST_NAME,
-        name=TEST_ALBUM_NAME,
-        year=TEST_ALBUM_YEAR,
-        torrent=test_torrent,
-        group_id=TEST_GROUP_ID,
-        artist_id=TEST_ARTIST_ID,
-    )
-
-    # Set empty responses for most variants
-    for artist, album_name in itertools.product(
-        ["Artist, Test", "Test Artist"], ["Test Album", "Album, Test"]
-    ):
-        query = f"{artist} {album_name}"
-        _setup_search_responses(client, query, [])
-
-    # Set a response with results for one query that should match
-    _setup_search_responses(client, f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}", [exact_match])
-
-    # Set up artist response
-    _setup_artist_response(client, TEST_ARTIST_ID, TEST_ARTIST_NAME, [test_artist_group])
-
-    # Search for torrents
-    result = search(album, client, log, min_score=0.75)
-
-    assert result is not None
-    assert result.red_groupid == TEST_GROUP_ID
-    assert result.red_torrentid == test_torrent.torrentId
-    assert TEST_ARTIST_ID in client.artist_queries
-
-
-def test_extract_group_fields_valid(test_torrent: RedSearchTorrent) -> None:
-    """Test extracting fields from a valid group."""
-    group = _make_test_group(
-        artist=TEST_ARTIST_NAME,
-        name=TEST_ALBUM_NAME,
-        year=TEST_ALBUM_YEAR,
-        torrent=test_torrent,
-        group_id=TEST_GROUP_ID,
-    )
-    fields = torrent_group_matchable(group)
-    assert fields is not None
-    assert fields.artist == TEST_ARTIST_NAME
-    assert fields.title == TEST_ALBUM_NAME
-    assert fields.year == TEST_ALBUM_YEAR
-
-
-def test_extract_group_fields_missing_artist(test_torrent: RedSearchTorrent) -> None:
-    """Test extracting fields from a group missing artist."""
-    group = _make_test_group(
-        artist="",
-        name=TEST_ALBUM_NAME,
-        year=TEST_ALBUM_YEAR,
-        torrent=test_torrent,
-        group_id=TEST_GROUP_ID,
-    )
-    fields = torrent_group_matchable(group)
-    assert fields is None
-
-
-def test_extract_group_fields_missing_name(test_torrent: RedSearchTorrent) -> None:
-    """Test extracting fields from a group missing name."""
-    group = _make_test_group(
-        artist=TEST_ARTIST_NAME,
-        name="",
-        year=TEST_ALBUM_YEAR,
-        torrent=test_torrent,
-        group_id=TEST_GROUP_ID,
-    )
-    fields = torrent_group_matchable(group)
-    assert fields is None
-
-
-def test_extract_group_fields_missing_year(test_torrent: RedSearchTorrent) -> None:
-    """Test extracting fields from a group missing year."""
-    # Create a group with a default year since _make_test_group requires an int
-    group = _make_test_group(
-        artist=TEST_ARTIST_NAME,
-        name=TEST_ALBUM_NAME,
-        year=0,
-        torrent=test_torrent,
-        group_id=TEST_GROUP_ID,
-    )
-    # Then override the groupYear to be None
-    group.groupYear = None
 
     fields = torrent_group_matchable(group)
-    assert fields is not None
-    assert fields.artist == TEST_ARTIST_NAME
-    assert fields.title == TEST_ALBUM_NAME
-    assert fields.year is None
+    assert fields == expected_fields
 
 
 @pytest.mark.parametrize(
@@ -800,3 +582,346 @@ def test_get_artist_id_from_red_group_exceptions(
     # Call the function
     artist_id = get_artist_id_from_red_group(group, log)
     assert artist_id == expected_result
+
+
+@dataclass(config=ConfigDict(arbitrary_types_allowed=True))
+class TestSearchParams:
+    album: FakeAlbum
+    user_response: Optional[RedUserResponse] = None
+    search_responses: list[RedSearchResponse] = Field(default_factory=list)
+    search_query_errors: list[str] = Field(default_factory=list)
+    artist_responses: list[RedArtistResponse] = Field(default_factory=list)
+    artist_query_errors: list[int] = Field(default_factory=list)
+    expected: Optional[BeetsRedFields] = None
+
+
+search_test_album = make_album(artist=TEST_ARTIST_NAME, name=TEST_ALBUM_NAME)
+search_test_user_response = make_user_response(
+    seeding=[
+        make_user_torrent(
+            group_id=TEST_GROUP_ID,
+            artist_id=TEST_ARTIST_ID,
+            artist=TEST_ARTIST_NAME,
+            group=TEST_ALBUM_NAME,
+            torrent_id=TEST_TORRENT_ID,
+        )
+    ]
+)
+search_test_search_response = make_search_response(
+    [
+        make_group(
+            group_id=TEST_GROUP_ID,
+            artist_id=TEST_ARTIST_ID,
+            artist=TEST_ARTIST_NAME,
+            name=TEST_ALBUM_NAME,
+            year=TEST_ALBUM_YEAR,
+            torrent_id=TEST_TORRENT_ID,
+        )
+    ]
+)
+search_test_artist_response = make_artist_response(
+    artist_id=TEST_ARTIST_ID,
+    name=TEST_ARTIST_NAME,
+    groups=[
+        make_artist_group(
+            group_id=TEST_GROUP_ID,
+            name=TEST_ALBUM_NAME,
+            year=TEST_ALBUM_YEAR,
+            torrents=[make_artist_torrent(torrent_id=TEST_TORRENT_ID, group_id=TEST_GROUP_ID)],
+        )
+    ],
+)
+search_test_expected = make_beets_fields(
+    artist_id=TEST_ARTIST_ID,
+    artist_name=TEST_ARTIST_NAME,
+    group_id=TEST_GROUP_ID,
+    group_name=TEST_ALBUM_NAME,
+    group_year=TEST_ALBUM_YEAR,
+    torrent_id=TEST_TORRENT_ID,
+)
+
+
+@pytest.mark.parametrize(
+    "description, parameters",
+    [
+        pytest.param(
+            "Both user and search queries fail; No path to Artist so no results.",
+            TestSearchParams(
+                album=search_test_album,
+                user_response=None,
+                search_query_errors=["Artist Album"],
+                expected=None,
+            ),
+            id="all_fail",
+        ),
+        pytest.param(
+            "User lookup fails, search succeeds, artist succeeds; "
+            "Results from search -> Artist path.",
+            TestSearchParams(
+                album=search_test_album,
+                user_response=None,
+                search_responses=[search_test_search_response],
+                artist_responses=[search_test_artist_response],
+                expected=search_test_expected,
+            ),
+            id="user_fails",
+        ),
+        pytest.param(
+            "User lookup succeeds, search fails, artist succeeds; "
+            "Results from user -> Artist path.",
+            TestSearchParams(
+                album=search_test_album,
+                user_response=search_test_user_response,
+                search_query_errors=["Artist Album"],
+                artist_responses=[search_test_artist_response],
+                expected=search_test_expected,
+            ),
+            id="search_fails",
+        ),
+        pytest.param(
+            "User lookup succeeds, search succeeds, artist fails; "
+            "No artist results to draw from, so no results.",
+            TestSearchParams(
+                album=search_test_album,
+                user_response=search_test_user_response,
+                search_responses=[search_test_search_response],
+                artist_query_errors=[TEST_ARTIST_ID],
+                expected=None,
+            ),
+            id="artist_fails",
+        ),
+        pytest.param(
+            "Search returns relevant groups that don't have artist values; No results.",
+            TestSearchParams(
+                album=make_album(artist="Artist", name="Album"),
+                search_responses=[
+                    make_search_response(
+                        [
+                            make_group(
+                                group_id=TEST_GROUP_ID,
+                                artist_id=None,
+                                artist=TEST_ARTIST_NAME,
+                                name=TEST_ALBUM_NAME,
+                                year=TEST_ALBUM_YEAR,
+                                torrent=RedSearchTorrent(
+                                    artists=[],
+                                    torrentId=TEST_TORRENT_ID,
+                                    editionId=1,
+                                    media="CD",
+                                    format="FLAC",
+                                    encoding="Lossless",
+                                ),
+                            )
+                        ]
+                    )
+                ],
+                expected=None,
+            ),
+            id="search_returns_groups_without_artist_id",
+        ),
+        # Success cases
+        pytest.param(
+            "User lookup succeeds, search succeeds, artist succeeds; "
+            "Results from user + search -> artist path.",
+            TestSearchParams(
+                album=search_test_album,
+                user_response=search_test_user_response,
+                search_responses=[search_test_search_response],
+                artist_responses=[search_test_artist_response],
+                expected=search_test_expected,
+            ),
+            id="nominal",
+        ),
+        pytest.param(
+            "User lookup doesn't have matching snatched torrent; "
+            "Results from search -> artist path.",
+            TestSearchParams(
+                album=search_test_album,
+                user_response=make_user_response(
+                    snatched=[
+                        make_user_torrent(
+                            group_id=TEST_GROUP_ID + 20,
+                            artist_id=TEST_ARTIST_ID + 20,
+                            artist="A different artist",
+                            group="A different album",
+                            torrent_id=TEST_TORRENT_ID + 20,
+                        )
+                    ]
+                ),
+                search_responses=[search_test_search_response],
+                artist_responses=[search_test_artist_response],
+                expected=search_test_expected,
+            ),
+            id="no_matching_snatches",
+        ),
+        pytest.param(
+            "Search doesn't have matching groups; " "Results from user -> artist path.",
+            TestSearchParams(
+                album=search_test_album,
+                user_response=search_test_user_response,
+                search_responses=[
+                    make_search_response(
+                        [
+                            make_group(
+                                group_id=TEST_GROUP_ID + 20,
+                                artist_id=TEST_ARTIST_ID + 20,
+                                artist="A different artist",
+                                name="A different album",
+                                year=TEST_ALBUM_YEAR,
+                            )
+                        ]
+                    )
+                ],
+                artist_responses=[search_test_artist_response],
+                expected=search_test_expected,
+            ),
+            id="no_matching_search_results",
+        ),
+        pytest.param(
+            "User snatches match a specific torrent, which should be selected from "
+            "the artist's groups' torrents.",
+            TestSearchParams(
+                album=search_test_album,
+                user_response=make_user_response(
+                    snatched=[
+                        make_user_torrent(
+                            group_id=TEST_GROUP_ID,
+                            artist_id=TEST_ARTIST_ID,
+                            artist=TEST_ARTIST_NAME,
+                            group=TEST_ALBUM_NAME,
+                            # Specific torrent id; should be selected and used.
+                            torrent_id=17,
+                        )
+                    ]
+                ),
+                search_responses=[search_test_search_response],
+                artist_responses=[
+                    make_artist_response(
+                        artist_id=TEST_ARTIST_ID,
+                        name=TEST_ARTIST_NAME,
+                        groups=[
+                            make_artist_group(
+                                group_id=TEST_GROUP_ID,
+                                torrents=[
+                                    make_artist_torrent(
+                                        torrent_id=TEST_TORRENT_ID, group_id=TEST_GROUP_ID
+                                    ),
+                                    make_artist_torrent(torrent_id=17, group_id=TEST_GROUP_ID),
+                                ],
+                            )
+                        ],
+                    )
+                ],
+                expected=make_beets_fields(
+                    artist_id=TEST_ARTIST_ID,
+                    artist_name=TEST_ARTIST_NAME,
+                    group_id=TEST_GROUP_ID,
+                    group_name=TEST_ALBUM_NAME,
+                    group_year=TEST_ALBUM_YEAR,
+                    torrent_id=17,
+                ),
+            ),
+            id="user_snatches_match_torrent",
+        ),
+        pytest.param(
+            "Search has a relevant group, but the artist response has a better match.",
+            TestSearchParams(
+                album=make_album(artist="Artist", name="Album"),
+                user_response=None,
+                search_responses=[
+                    make_search_response(
+                        [
+                            make_group(
+                                group_id=TEST_GROUP_ID + 1,
+                                artist_id=TEST_ARTIST_ID,
+                                artist="Artist",
+                                # Close match, but not exactly right.
+                                name="Album Covers",
+                                year=TEST_ALBUM_YEAR,
+                            )
+                        ]
+                    )
+                ],
+                artist_responses=[
+                    make_artist_response(
+                        artist_id=TEST_ARTIST_ID,
+                        name="Artist",
+                        groups=[
+                            make_artist_group(
+                                group_id=TEST_GROUP_ID,
+                                # Exact match.
+                                name="Album",
+                                year=TEST_ALBUM_YEAR,
+                                torrents=[
+                                    make_artist_torrent(
+                                        torrent_id=TEST_TORRENT_ID, group_id=TEST_GROUP_ID
+                                    )
+                                ],
+                            ),
+                            make_artist_group(
+                                group_id=TEST_GROUP_ID + 1,
+                                name="Album Covers",
+                                year=TEST_ALBUM_YEAR + 10,
+                                torrents=[
+                                    make_artist_torrent(
+                                        torrent_id=TEST_TORRENT_ID + 1, group_id=TEST_GROUP_ID + 1
+                                    )
+                                ],
+                            ),
+                        ],
+                    )
+                ],
+                expected=search_test_expected,
+            ),
+            id="artist_has_better_match",
+        ),
+        pytest.param(
+            "Search returns values for a variant of the artist's name.",
+            TestSearchParams(
+                album=make_album(
+                    artist="Artist Variant", artist_sort=TEST_ARTIST_NAME, name=TEST_ALBUM_NAME
+                ),
+                user_response=search_test_user_response,
+                search_responses=[search_test_search_response],
+                artist_responses=[search_test_artist_response],
+                expected=search_test_expected,
+            ),
+            id="search_artist_name_variants",
+        ),
+    ],
+)
+def test_search(log: FakeLogger, description: str, parameters: TestSearchParams) -> None:
+    client = FakeClient()
+
+    if parameters.user_response:
+        client.user_response = parameters.user_response
+
+    for search_response in parameters.search_responses:
+        client.search_responses[f"{TEST_ARTIST_NAME} {TEST_ALBUM_NAME}"] = search_response
+
+    for search_query_error in parameters.search_query_errors:
+        client.error_queries.add(search_query_error)
+
+    for artist_response in parameters.artist_responses:
+        assert artist_response.response.id is not None
+        client.artist_responses[artist_response.response.id] = artist_response
+
+    for artist_query_error in parameters.artist_query_errors:
+        client.error_artist_queries.add(artist_query_error)
+
+    result = search(parameters.album, client, log, min_score=0.75)
+
+    if parameters.expected is None:
+        assert result is None
+    else:
+        expected = parameters.expected
+        for field, expected_value in expected.__dict__.items():
+            if field == "red_mtime":
+                continue
+
+            if not hasattr(result, field):
+                raise ValueError(f"{description}: expected field {field} not found in result: {result}")
+
+            actual_value = getattr(result, field)
+            assert actual_value == expected_value, f"{description}: expected {expected_value} for field {field}, got {actual_value}"
+
