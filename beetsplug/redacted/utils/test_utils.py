@@ -398,7 +398,8 @@ class FakeLogger(logging.Logger):
     def __init__(self) -> None:
         """Initialize fake logger."""
         super().__init__("fake")
-        self.messages: list[str] = []
+        self.logger = logging.getLogger("FakeLogger")
+        self.messages: list[tuple[str, tuple[Any]]] = []
 
     def debug(self, msg: str, *args: Any) -> None:  # type: ignore[override]
         """Log a debug message.
@@ -407,7 +408,8 @@ class FakeLogger(logging.Logger):
             msg: Message to log
             args: Format arguments
         """
-        self.messages.append(msg.format(*args))
+        self.logger.debug(msg.format(*args))
+        self.messages.append((msg, args))
 
     def info(self, msg: str, *args: Any) -> None:  # type: ignore[override]
         """Log an info message.
@@ -416,7 +418,8 @@ class FakeLogger(logging.Logger):
             msg: Message to log
             args: Format arguments
         """
-        self.messages.append(msg.format(*args))
+        self.logger.info(msg.format(*args))
+        self.messages.append((msg, args))
 
     def error(self, msg: str, *args: Any) -> None:  # type: ignore[override]
         """Log an error message.
@@ -425,16 +428,18 @@ class FakeLogger(logging.Logger):
             msg: Message to log
             args: Format arguments
         """
-        self.messages.append(msg.format(*args))
+        self.logger.error(msg.format(*args))
+        self.messages.append((msg, args))
 
-    def assert_message(self, msg: str) -> None:
+    def assert_message(self, msg: str, args: tuple[Any, ...]) -> None:
         """Assert that a message was logged.
 
         Args:
             msg: Message to check for. This can be a substring of the actual message.
+            args: Format arguments
         """
         for message in self.messages:
-            if msg in message:
+            if msg in message[0] and args == message[1]:
                 return
         raise AssertionError(f"Expected message containing '{msg}' not found in {self.messages}")
 

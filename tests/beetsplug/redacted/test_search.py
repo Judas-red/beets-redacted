@@ -89,13 +89,17 @@ def album() -> FakeAlbum:
 
 def make_user_torrent(
     group_id: int = TEST_GROUP_ID,
-    group: str = TEST_ALBUM_NAME,
-    artist: str = TEST_ARTIST_NAME,
+    name: str = TEST_ALBUM_NAME,
+    artist_name: str = TEST_ARTIST_NAME,
     artist_id: int = TEST_ARTIST_ID,
     torrent_id: int = TEST_TORRENT_ID,
 ) -> RedUserTorrent:
     return RedUserTorrent(
-        groupId=group_id, name=group, torrentId=torrent_id, artistName=artist, artistId=artist_id
+        groupId=group_id,
+        name=name,
+        torrentId=torrent_id,
+        artistName=artist_name,
+        artistId=artist_id,
     )
 
 
@@ -529,7 +533,7 @@ def test_beets_fields_from_artist_torrent_groups(
 
 
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
-class TestSearchParams:
+class SearchTestParams:
     album: FakeAlbum
     user_response: Optional[RedUserResponse] = None
     search_responses: list[RedSearchResponse] = Field(default_factory=list)
@@ -541,12 +545,12 @@ class TestSearchParams:
 
 search_test_album = make_album(artist=TEST_ARTIST_NAME, name=TEST_ALBUM_NAME)
 search_test_user_response = make_user_response(
-    seeding=[
+    snatched=[
         make_user_torrent(
-            group_id=TEST_GROUP_ID,
             artist_id=TEST_ARTIST_ID,
-            artist=TEST_ARTIST_NAME,
-            group=TEST_ALBUM_NAME,
+            artist_name=TEST_ARTIST_NAME,
+            group_id=TEST_GROUP_ID,
+            name=TEST_ALBUM_NAME,
             torrent_id=TEST_TORRENT_ID,
         )
     ]
@@ -590,7 +594,7 @@ search_test_expected = make_beets_fields(
     [
         pytest.param(
             "Both user and search queries fail; No path to Artist so no results.",
-            TestSearchParams(
+            SearchTestParams(
                 album=search_test_album,
                 user_response=None,
                 search_query_errors=["Artist Album"],
@@ -601,7 +605,7 @@ search_test_expected = make_beets_fields(
         pytest.param(
             "User lookup fails, search succeeds, artist succeeds; "
             "Results from search -> Artist path.",
-            TestSearchParams(
+            SearchTestParams(
                 album=search_test_album,
                 user_response=None,
                 search_responses=[search_test_search_response],
@@ -613,7 +617,7 @@ search_test_expected = make_beets_fields(
         pytest.param(
             "User lookup succeeds, search fails, artist succeeds; "
             "Results from user -> Artist path.",
-            TestSearchParams(
+            SearchTestParams(
                 album=search_test_album,
                 user_response=search_test_user_response,
                 search_query_errors=["Artist Album"],
@@ -625,7 +629,7 @@ search_test_expected = make_beets_fields(
         pytest.param(
             "User lookup succeeds, search succeeds, artist fails; "
             "No artist results to draw from, so no results.",
-            TestSearchParams(
+            SearchTestParams(
                 album=search_test_album,
                 user_response=search_test_user_response,
                 search_responses=[search_test_search_response],
@@ -636,7 +640,7 @@ search_test_expected = make_beets_fields(
         ),
         pytest.param(
             "Search returns relevant groups that don't have artist values; No results.",
-            TestSearchParams(
+            SearchTestParams(
                 album=make_album(artist="Artist", name="Album"),
                 search_responses=[
                     make_search_response(
@@ -667,7 +671,7 @@ search_test_expected = make_beets_fields(
         pytest.param(
             "User lookup succeeds, search succeeds, artist succeeds; "
             "Results from user + search -> artist path.",
-            TestSearchParams(
+            SearchTestParams(
                 album=search_test_album,
                 user_response=search_test_user_response,
                 search_responses=[search_test_search_response],
@@ -679,15 +683,15 @@ search_test_expected = make_beets_fields(
         pytest.param(
             "User lookup doesn't have matching snatched torrent; "
             "Results from search -> artist path.",
-            TestSearchParams(
+            SearchTestParams(
                 album=search_test_album,
                 user_response=make_user_response(
                     snatched=[
                         make_user_torrent(
                             group_id=TEST_GROUP_ID + 20,
                             artist_id=TEST_ARTIST_ID + 20,
-                            artist="A different artist",
-                            group="A different album",
+                            artist_name="A different artist",
+                            name="A different album",
                             torrent_id=TEST_TORRENT_ID + 20,
                         )
                     ]
@@ -700,7 +704,7 @@ search_test_expected = make_beets_fields(
         ),
         pytest.param(
             "Search doesn't have matching groups; " "Results from user -> artist path.",
-            TestSearchParams(
+            SearchTestParams(
                 album=search_test_album,
                 user_response=search_test_user_response,
                 search_responses=[
@@ -724,15 +728,15 @@ search_test_expected = make_beets_fields(
         pytest.param(
             "User snatches match a specific torrent, which should be selected from "
             "the artist's groups' torrents.",
-            TestSearchParams(
+            SearchTestParams(
                 album=search_test_album,
                 user_response=make_user_response(
                     snatched=[
                         make_user_torrent(
                             group_id=TEST_GROUP_ID,
                             artist_id=TEST_ARTIST_ID,
-                            artist=TEST_ARTIST_NAME,
-                            group=TEST_ALBUM_NAME,
+                            artist_name=TEST_ARTIST_NAME,
+                            name=TEST_ALBUM_NAME,
                             # Specific torrent id; should be selected and used.
                             torrent_id=17,
                         )
@@ -769,7 +773,7 @@ search_test_expected = make_beets_fields(
         ),
         pytest.param(
             "Search has a relevant group, but the artist response has a better match.",
-            TestSearchParams(
+            SearchTestParams(
                 album=make_album(artist="Artist", name="Album"),
                 user_response=None,
                 search_responses=[
@@ -821,7 +825,7 @@ search_test_expected = make_beets_fields(
         ),
         pytest.param(
             "Search returns values for a variant of the artist's name.",
-            TestSearchParams(
+            SearchTestParams(
                 album=make_album(
                     artist="Artist Variant", artist_sort=TEST_ARTIST_NAME, name=TEST_ALBUM_NAME
                 ),
@@ -834,7 +838,7 @@ search_test_expected = make_beets_fields(
         ),
     ],
 )
-def test_search(log: FakeLogger, description: str, parameters: TestSearchParams) -> None:
+def test_search(log: FakeLogger, description: str, parameters: SearchTestParams) -> None:
     client = FakeClient()
 
     if parameters.user_response:
@@ -857,6 +861,8 @@ def test_search(log: FakeLogger, description: str, parameters: TestSearchParams)
 
     if parameters.expected is None:
         assert result is None
+    elif result is None:
+        raise ValueError(f"{description}: got None, expected {parameters.expected}")
     else:
         expected = parameters.expected
         for field, expected_value in expected.__dict__.items():

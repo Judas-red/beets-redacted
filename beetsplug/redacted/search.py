@@ -69,7 +69,8 @@ class RedTorrent:
     group_time: Optional[int] = None
 
     @classmethod
-    def from_search_result(cls, result: RedSearchResult) -> Generator["RedTorrent", None, None]:
+    def from_search_result(cls, result: RedSearchResult, log: logging.Logger) -> Generator["RedTorrent", None, None]:
+        log.debug("Creating RedTorrent from search result: {0}", result)
         base = cls(
             group_id=result.groupId,
             group=result.groupName,
@@ -118,7 +119,8 @@ class RedTorrent:
                 yield copy
 
     @classmethod
-    def from_user_torrent(cls, torrent: RedUserTorrent) -> "RedTorrent":
+    def from_user_torrent(cls, torrent: RedUserTorrent, log: logging.Logger) -> "RedTorrent":
+        log.debug("Creating RedTorrent from user torrent: {0}", torrent)
         return cls(
             artist_id=torrent.artistId,
             artist=torrent.artistName,
@@ -200,6 +202,15 @@ def match_album(
             )
             continue
 
+        log.debug(
+            "Matching torrent {0} - {1} ({2:d}) against album {3} - {4} ({5:d})",
+            torrent.artist,
+            torrent.group,
+            torrent.year or 0,
+            album.albumartist,
+            album.album,
+            album.year or 0,
+        )
         match_result = score_match(album_fields, group_fields, log, weights)
 
         if match_result.total_score > best_match_score:
@@ -394,9 +405,10 @@ def best_match_from_snatched(
 ) -> tuple[Optional[RedTorrent], float]:
     # Look up the user's snatched torrents. We will always add these in to the set of torrents
     # to match.
+    log.debug("Retrieving user's snatched torrents")
     user_response = client.user(TorrentType.SNATCHED)
     snatched_torrents = [
-        RedTorrent.from_user_torrent(torrent) for torrent in user_response.response.snatched
+        RedTorrent.from_user_torrent(torrent, log) for torrent in user_response.response.snatched
     ]
 
     # Is there a good match in the user's snatched torrents?
@@ -406,6 +418,7 @@ def best_match_from_snatched(
 def best_match_from_search(
     client: Client, album: Album, c_artist: str, c_album: str, log: logging.Logger
 ) -> tuple[Optional[RedTorrent], float]:
+    log.debug("Searching for torrents matching {0} - {1}", c_artist, c_album)
     search_query = normalize_query(c_artist, c_album, log)
     if not search_query:
         log.debug("Could not construct search query for {0} - {1}", c_artist, c_album)
@@ -413,7 +426,7 @@ def best_match_from_search(
 
     log.debug("Searching for torrents with query: {0}", search_query)
     results = [
-        RedTorrent.from_search_result(group)
+        RedTorrent.from_search_result(group, log)
         for group in client.search(search_query).response.results
     ]
 
@@ -459,6 +472,7 @@ def search(
 
     best_match = None
     best_match_score = 0.0
+    best_matcher = None
     for matcher in matchers():
         try:
             match, score = matcher()
@@ -474,8 +488,9 @@ def search(
             continue
 
         if match and score > best_match_score:
-            best_match_score = score
             best_match = match
+            best_match_score = score
+            best_matcher = matcher
 
     if not best_match or best_match_score < min_score:
         log.debug(
@@ -489,12 +504,14 @@ def search(
         return None
     else:
         log.debug(
-            "Matched good search result for {0} - {1} ({2:d}) (min {3:.2f}, best was {4:.2f})",
+            "Matched good search result for {0} - {1} ({2:d}) (min {3:.2f}, best was {4:.2f}) "
+            "using matcher {5}",
             album.get("albumartist"),
             album.get("album"),
             album.get("year", 0),
             min_score,
             best_match_score,
+            best_matcher,
         )
 
     # Extract artist ID for detailed lookup
