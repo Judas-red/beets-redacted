@@ -412,9 +412,9 @@ def test_artist_torrent_group_matchable(group_name: str, expected_result: bool) 
 
 
 @pytest.mark.parametrize(
-    "group_config, expected",
+    "group_config, preferred_torrents, expected",
     [
-        pytest.param({"torrentgroup": []}, (None, None), id="no_torrent_groups"),
+        pytest.param({"torrentgroup": []}, [], (None, None), id="no_torrent_groups"),
         pytest.param(
             {
                 "torrentgroup": [
@@ -426,6 +426,7 @@ def test_artist_torrent_group_matchable(group_name: str, expected_result: bool) 
                     )
                 ]
             },
+            [],
             (None, None),
             id="missing_name",
         ),
@@ -440,6 +441,7 @@ def test_artist_torrent_group_matchable(group_name: str, expected_result: bool) 
                     )
                 ]
             },
+            [],
             (None, None),
             id="low_score_match",
         ),
@@ -454,8 +456,36 @@ def test_artist_torrent_group_matchable(group_name: str, expected_result: bool) 
                     )
                 ]
             },
+            [],
             (None, None),
             id="low_score_match",
+        ),
+        pytest.param(
+            {
+                "torrentgroup": [
+                    RedArtistTorrentGroup(
+                        groupId=TEST_GROUP_ID,
+                        groupName=TEST_ALBUM_NAME,
+                        groupYear=TEST_ALBUM_YEAR,
+                        torrent=[
+                            RedArtistTorrent(id=TEST_TORRENT_ID, groupId=TEST_GROUP_ID),
+                            RedArtistTorrent(id=TEST_TORRENT_ID + 1, groupId=TEST_GROUP_ID),
+                            RedArtistTorrent(id=TEST_TORRENT_ID + 2, groupId=TEST_GROUP_ID),
+                        ],
+                    )
+                ]
+            },
+            [RedTorrent(torrent_id=TEST_TORRENT_ID + 1, group_id=TEST_GROUP_ID)],
+            (
+                RedArtistTorrentGroup(
+                    groupId=TEST_GROUP_ID,
+                    groupName=TEST_ALBUM_NAME,
+                    groupYear=TEST_ALBUM_YEAR,
+                    torrent=[],
+                ),
+                RedArtistTorrent(id=TEST_TORRENT_ID + 1, groupId=TEST_GROUP_ID),
+            ),
+            id="preferred_torrent",
         ),
     ],
 )
@@ -463,6 +493,7 @@ def test_match_artist_album_edge_cases(
     log: FakeLogger,
     album: FakeAlbum,
     group_config: dict,
+    preferred_torrents: list[RedTorrent],
     expected: Union[tuple[RedArtistTorrentGroup, RedArtistTorrent], None],
 ) -> None:
     """Test match_artist_album with parameterized edge cases."""
@@ -471,7 +502,10 @@ def test_match_artist_album_edge_cases(
         response=RedArtistResponseResults(id=TEST_ARTIST_ID, name=TEST_ARTIST_NAME, **group_config),
     )
 
-    result = match_artist_album(album, response, log, min_score=0.75)
+    result = match_artist_album(album, response, preferred_torrents, log, min_score=0.75)
+    if result and result[0]:
+        # Clear the torrent list from the group to simplify testing.
+        result[0].torrent = []
     assert result == expected
 
 

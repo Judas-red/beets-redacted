@@ -29,6 +29,10 @@ from beetsplug.redacted.utils.search_utils import normalize_query
 
 @dataclasses.dataclass
 class RedTorrent:
+    # Whether this torrent is preferred for matching, e.g. was drawn from the user's snatched
+    # torrents, making it more likely to be in their library.
+    preferred: bool = False
+
     artist_id: Optional[int] = None
     artist: Optional[str] = None
 
@@ -69,9 +73,12 @@ class RedTorrent:
     group_time: Optional[int] = None
 
     @classmethod
-    def from_search_result(cls, result: RedSearchResult, log: logging.Logger) -> Generator["RedTorrent", None, None]:
+    def from_search_result(
+        cls, result: RedSearchResult, log: logging.Logger
+    ) -> Generator["RedTorrent", None, None]:
         log.debug("Creating RedTorrent from search result: {0}", result)
         base = cls(
+            preferred=False,
             group_id=result.groupId,
             group=result.groupName,
             artist=result.artist,
@@ -122,6 +129,7 @@ class RedTorrent:
     def from_user_torrent(cls, torrent: RedUserTorrent, log: logging.Logger) -> "RedTorrent":
         log.debug("Creating RedTorrent from user torrent: {0}", torrent)
         return cls(
+            preferred=True,
             artist_id=torrent.artistId,
             artist=torrent.artistName,
             group_id=torrent.groupId,
@@ -239,7 +247,11 @@ def match_album(
 
 
 def match_artist_album(
-    album: Album, artist_response: RedArtistResponse, log: logging.Logger, min_score: float
+    album: Album,
+    artist_response: RedArtistResponse,
+    preferred_torrents: list[RedTorrent],
+    log: logging.Logger,
+    min_score: float,
 ) -> tuple[Union[RedArtistTorrentGroup, None], Union[RedArtistTorrent, None]]:
     """Match an album against artist's torrent groups.
 
@@ -269,13 +281,25 @@ def match_artist_album(
     best_match_score: float = 0.0
 
     # Title and year weights are more important when artist is already known
+    #
+    # TODO: Make these weights configurable
     weights = {"artist": 0.2, "title": 0.7, "year": 0.1}
+
+    pt_ids = set(torrent.torrent_id for torrent in preferred_torrents)
 
     # Score all the groups, keeping track of the best match
     for group in torrent_groups:
         if not group.torrent:
             log.debug("Artist group {:s} has no torrents, skipping", group.groupName)
             continue
+
+        # If this group has the preferred torrent ID, use it as the best match
+        preferred_torrent = next((t for t in group.torrent if t.id in pt_ids), None)
+        if preferred_torrent:
+            best_group = group
+            best_torrent = preferred_torrent
+            best_match_score = 1.0
+            break
 
         group_fields = artist_torrent_group_matchable(group, artist_data.name)
         if not group_fields:
@@ -473,6 +497,7 @@ def search(
     best_match = None
     best_match_score = 0.0
     best_matcher = None
+    preferred_torrents = []
     for matcher in matchers():
         try:
             match, score = matcher()
@@ -491,6 +516,9 @@ def search(
             best_match = match
             best_match_score = score
             best_matcher = matcher
+
+        if match and match.preferred:
+            preferred_torrents.append(match)
 
     if not best_match or best_match_score < min_score:
         log.debug(
@@ -534,7 +562,9 @@ def search(
         return None
 
     # Find a match for the album in the artist's discography
-    artist_group, artist_torrent = match_artist_album(album, artist_data, log, min_score)
+    artist_group, artist_torrent = match_artist_album(
+        album, artist_data, preferred_torrents, log, min_score
+    )
     if artist_group and artist_torrent:
         # Extract album update fields from artist group (album) and torrent match
         return beets_fields_from_artist_torrent_groups(
