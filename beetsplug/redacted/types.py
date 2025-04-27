@@ -183,12 +183,22 @@ from typing import Generic, Literal, TypeVar, Union
 from pydantic.dataclasses import dataclass
 
 
-class RedAction(Enum):
+class Action(Enum):
     """Valid actions for the Redacted API."""
 
     BROWSE = "browse"
     REQUESTS = "requests"
     ARTIST = "artist"
+    USER_TORRENTS = "user_torrents"
+
+
+class TorrentType(Enum):
+    """Valid types for user torrents."""
+
+    SEEDING = "seeding"
+    LEECHING = "leeching"
+    UPLOADED = "uploaded"
+    SNATCHED = "snatched"
 
 
 @dataclass
@@ -411,6 +421,32 @@ class RedArtistResponse(RedSuccessResponse):
     """Type for the artist response from Redacted API."""
 
     response: RedArtistResponseResults
+
+
+@dataclass
+class RedUserTorrent:
+    """Type for a user torrent."""
+
+    groupId: int
+    name: str
+    torrentId: int
+    artistName: str
+    artistId: int
+
+
+@dataclass
+class RedUserResponseResults:
+    seeding: list[RedUserTorrent]
+    leeching: list[RedUserTorrent]
+    uploaded: list[RedUserTorrent]
+    snatched: list[RedUserTorrent]
+
+
+@dataclass
+class RedUserResponse(RedSuccessResponse):
+    """Type for the user response from Redacted API."""
+
+    response: RedUserResponseResults
 
 
 RedactedAPIResponse = Union[RedSearchResponse, RedArtistResponse, RedFailureResponse]

@@ -1,6 +1,7 @@
 """Tests for the redacted plugin."""
 
 import logging
+from optparse import Values
 from typing import Any
 from unittest.mock import patch
 
@@ -11,7 +12,6 @@ from beetsplug.redacted.search import BeetsRedFields
 from beetsplug.redacted.utils.test_utils import (
     FakeAlbum,
     FakeClient,
-    FakeCommandOpts,
     FakeConfig,
     FakeLibrary,
     FakeLogger,
@@ -127,7 +127,7 @@ def test_command_basic_execution(config: FakeConfig, log: FakeLogger, lib: FakeL
     """Test basic command execution searches torrents."""
     client = FakeClient()
     command = RedactedCommand(config, log, client)
-    result = command.func(lib, FakeCommandOpts(), [])
+    result = command.func(lib, Values(), [])
 
     # Verify the return value
     assert result["modified"] == 0
@@ -138,7 +138,7 @@ def test_command_basic_execution(config: FakeConfig, log: FakeLogger, lib: FakeL
 def test_command_with_query(config: FakeConfig, lib: FakeLibrary, log: FakeLogger) -> None:
     """Test command execution with a query."""
     command = RedactedCommand(config, log, FakeClient())
-    result = command.func(lib, FakeCommandOpts(), ["artist:testartist"])
+    result = command.func(lib, Values(), ["artist:testartist"])
 
     # Verify the return value
     assert result["modified"] == 0
@@ -163,7 +163,7 @@ def test_command_with_unchanged_search_results_does_not_modify_albums(
         mock_search.return_value = BeetsRedFields(red_groupid=1, red_torrentid=2)
 
         # Execute command with force=True so that the album will still be queried.
-        result = command.func(lib_with_red_groupid, FakeCommandOpts(force=True), [])
+        result = command.func(lib_with_red_groupid, Values({"force": True}), [])
 
         # Verify the album was processed but not modified.
         assert result["total"] == 1
@@ -182,7 +182,7 @@ def test_command_with_force(
     assert len(lib_with_red_groupid.albums()) > 0
 
     # Verify that the album we've set up would not be processed without force=True
-    result = command.func(lib_with_red_groupid, FakeCommandOpts(force=False), [])
+    result = command.func(lib_with_red_groupid, Values({"force": False}), [])
     assert result["total"] == 0
 
     # Mock search functions to return values (to simulate finding matches)
@@ -190,7 +190,7 @@ def test_command_with_force(
         mock_search.return_value = BeetsRedFields(red_groupid=1, red_torrentid=2)
 
         # Verify that the same album is processed with force=True
-        result = command.func(lib_with_red_groupid, FakeCommandOpts(force=True), [])
+        result = command.func(lib_with_red_groupid, Values({"force": True}), [])
 
         assert result["total"] == 1
 
@@ -213,7 +213,7 @@ def test_command_without_force(config: FakeConfig, log: FakeLogger, lib: FakeLib
     command = RedactedCommand(config, log, client)
 
     # Execute command without force=True
-    result = command.func(lib, FakeCommandOpts(force=False), [])
+    result = command.func(lib, Values({"force": False}), [])
 
     # Verify the return value
     assert result["modified"] == 0
@@ -232,7 +232,7 @@ def test_command_with_matches(
         mock_search.return_value = BeetsRedFields(red_groupid=1, red_torrentid=1)
 
         command = RedactedCommand(config, log, FakeClient())
-        result = command.func(lib_with_album, FakeCommandOpts(), [])
+        result = command.func(lib_with_album, Values(), [])
 
         # Verify the return value
         assert result["modified"] == 1
@@ -252,7 +252,7 @@ def test_command_pretend_mode(
 
         command = RedactedCommand(config, log, FakeClient())
         # Execute command in pretend mode
-        result = command.func(lib_with_album, FakeCommandOpts(pretend=True), [])
+        result = command.func(lib_with_album, Values({"pretend": True}), [])
 
         # Verify the return value - should be unmodified since we're in pretend mode
         assert result["modified"] == 0

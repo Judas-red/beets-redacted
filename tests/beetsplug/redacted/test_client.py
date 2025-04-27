@@ -7,7 +7,7 @@ import pytest
 
 from beetsplug.redacted.client import Client
 from beetsplug.redacted.exceptions import RedactedError
-from beetsplug.redacted.types import RedAction
+from beetsplug.redacted.types import Action
 from beetsplug.redacted.utils.test_utils import FakeHTTPClient, FakeLogger
 
 
@@ -39,7 +39,7 @@ def test_make_api_request_success(client: Client) -> None:
         response={"status": "success", "response": {"test": "data"}},
     )
 
-    response = client._make_api_request(RedAction.BROWSE, {})
+    response = client._make_api_request(Action.BROWSE, {})
     assert response == {"status": "success", "response": {"test": "data"}}
 
 
@@ -54,7 +54,7 @@ def test_make_api_request_rate_limit(client: Client) -> None:
     )
 
     with pytest.raises(RedactedError):
-        client._make_api_request(RedAction.BROWSE, {})
+        client._make_api_request(Action.BROWSE, {})
 
 
 def test_make_api_request_json_parse_error(client: Client) -> None:
@@ -67,7 +67,7 @@ def test_make_api_request_json_parse_error(client: Client) -> None:
     )
 
     with pytest.raises(RedactedError):
-        client._make_api_request(RedAction.BROWSE, {})
+        client._make_api_request(Action.BROWSE, {})
 
 
 def test_browse(client: Client) -> None:

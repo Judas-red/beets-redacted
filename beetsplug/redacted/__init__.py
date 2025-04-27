@@ -10,7 +10,6 @@ from beets.dbcore import types as dbtypes  # type: ignore[import-untyped]
 from beets.importer import ImportTask  # type: ignore[import-untyped]
 from beets.library import Album, Item, Library  # type: ignore[import-untyped]
 from beets.plugins import BeetsPlugin  # type: ignore[import-untyped]
-from beets.ui import UserError  # type: ignore[import-untyped]
 
 from beetsplug.redacted.client import Client
 from beetsplug.redacted.command import RedactedCommand
@@ -60,19 +59,25 @@ class RedactedPlugin(BeetsPlugin):
         }
     )
 
+    default_config = frozendict.frozendict(
+        {"api_key": None, "user_id": None, "min_score": 0.75, "auto": False}
+    )
+
     def __init__(self) -> None:
         """Initialize the plugin."""
         super().__init__()
-        self.config.add({"api_key": "", "min_score": 0.75, "auto": False})
-        self._http_client = CachedRequestsClient(self.BASE_URL, self._log)
-        self.register_listener("cli_exit", self.cleanup)
 
-        self._client = self._get_client(self._http_client)
+        self.config.add(self.default_config)
         self._min_score = self.config["min_score"].as_number()
 
-        # Register import stage if 'auto' is enabled
+        self._http_client = CachedRequestsClient(self.BASE_URL, self._log)
+        self._client = self._get_client(self._http_client)
+
+        # Register import stage if 'auto' is True
         if self._client and self.config["auto"].get(bool):
             self.import_stages = [self.import_stage]
+
+        self.register_listener("cli_exit", self.cleanup)
 
     def _get_client(self, http_client: HTTPClient) -> Union[Client, None]:
         """Get or create the RedactedClient instance."""
@@ -80,7 +85,15 @@ class RedactedPlugin(BeetsPlugin):
         if not api_key:
             self._log.warning("redacted: api_key not set in configuration.")
             return None
-        return Client(api_key, http_client, self._log)
+
+        user_id = self.config["user_id"].get()
+        if not user_id:
+            self._log.warning(
+                "redacted: user_id not set in configuration. "
+                "Will not be able to consider snatched torrents."
+            )
+
+        return Client(http_client, self._log, api_key, user_id=user_id)
 
     def cleanup(self, _: Library) -> None:
         """Clean up resources when Beets is shutting down."""
@@ -124,11 +137,7 @@ class RedactedPlugin(BeetsPlugin):
         Returns:
             List of commands.
         """
-        api_key = self.config["api_key"].get()
-        if not api_key:
-            raise UserError("redacted: api_key not set")
-
-        client = Client(api_key, self._http_client, self._log)
+        client = self._get_client(self._http_client)
         return [RedactedCommand(self.config, self._log, client)]
 
     def candidates(
