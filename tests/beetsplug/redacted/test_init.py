@@ -10,10 +10,10 @@ from beetsplug.redacted import RedactedPlugin
 from beetsplug.redacted.types import BeetsRedFields
 from beetsplug.redacted.utils.test_utils import (
     FakeAlbum,
+    FakeClient,
     FakeConfig,
     FakeLibrary,
     FakeLogger,
-    FakeRedactedClient,
 )
 
 
@@ -86,7 +86,7 @@ def test_import_stage_no_match_skips(log: FakeLogger, test_album: FakeAlbum) -> 
     """Test that import_stage skips albums with no match found."""
     plugin = RedactedPlugin()
     plugin._log = log
-    plugin._client = FakeRedactedClient()
+    plugin._client = FakeClient()
     plugin._min_score = 0.75
 
     # Create a task with an album
@@ -107,7 +107,7 @@ def test_import_stage_with_match_applies_fields(log: FakeLogger, test_album: Fak
     """Test that import_stage applies fields when a match is found."""
     plugin = RedactedPlugin()
     plugin._log = log
-    plugin._client = FakeRedactedClient()
+    plugin._client = FakeClient()
     plugin._min_score = 0.75
 
     # Create a task with an album
@@ -142,7 +142,7 @@ def test_import_stage_with_unchanged_fields_no_update(
     """Test that import_stage doesn't update if fields haven't changed."""
     plugin = RedactedPlugin()
     plugin._log = log
-    plugin._client = FakeRedactedClient()
+    plugin._client = FakeClient()
     plugin._min_score = 0.75
 
     # Set existing values on the album

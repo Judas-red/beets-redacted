@@ -5,13 +5,13 @@ import logging
 import sys
 import time
 from optparse import OptionParser, Values
-from typing import Any
+from typing import Any, Optional
 
 import enlighten  # type: ignore[import-untyped]
 from beets import ui  # type: ignore[import-untyped]
 from beets.library import Library  # type: ignore[import-untyped]
 
-from beetsplug.redacted.client import RedactedClient
+from beetsplug.redacted.client import Client
 from beetsplug.redacted.search import search
 
 
@@ -20,7 +20,7 @@ def command_func(
     lib: Library,
     opts: Values,
     args: list[str],
-    client: RedactedClient,
+    client: Client,
     log: logging.Logger,
 ) -> dict[str, int]:
     """Execute the redacted command.
@@ -37,7 +37,7 @@ def command_func(
     query = " ".join(args) if args else ""
 
     # Filter query to only include albums without red_groupid if force=False
-    if not opts.force:
+    if not opts.ensure_value("force", False):
         query = f"{query} red_groupid::^$"
 
     # Get the albums to process from the Beets database
@@ -94,7 +94,7 @@ def command_func(
 class RedactedCommand(ui.Subcommand):
     """Command for searching and updating Redacted information for library albums."""
 
-    def __init__(self, config: Any, log: logging.Logger, client: RedactedClient) -> None:
+    def __init__(self, config: Any, log: logging.Logger, client: Optional[Client] = None) -> None:
         """Initialize the command.
 
         Args:
@@ -106,25 +106,33 @@ class RedactedCommand(ui.Subcommand):
         self.log = log
         self.client = client
 
+        default_opts = {
+            "min_score": config["min_score"].as_number(),
+            "pretend": False,
+            "force": False,
+        }
+
         # Create the command parser
         parser = OptionParser(usage="beet redacted [options] [QUERY...]")
         parser.add_option(
             "--min-score",
             dest="min_score",
             type="float",
-            default=config["min_score"].as_number(),
+            default=default_opts["min_score"],
             help="Minimum match score to consider (0-1, default: 0.75)",
         )
         parser.add_option(
             "-p",
             "--pretend",
             action="store_true",
+            default=default_opts["pretend"],
             help="Show what would be updated without making changes",
         )
         parser.add_option(
             "-f",
             "--force",
             action="store_true",
+            default=default_opts["force"],
             help="Search all albums even if they already have a red_groupid",
         )
 
@@ -136,6 +144,26 @@ class RedactedCommand(ui.Subcommand):
         )
 
         # Bind the logger and client to the command function
-        self.func = lambda lib, opts, args: command_func(
-            self, lib, opts, args, self.client, self.log
-        )
+        if self.client:
+
+            def ensure_values(opts: Values, default: dict[str, Any]) -> Values:
+                for key, value in default.items():
+                    opts.ensure_value(key, value)
+                return opts
+
+            def func(lib: Library, opts: Values, args: list[str]) -> dict[str, int]:
+                assert self.client is not None
+
+                opts = ensure_values(opts, default_opts)
+                return command_func(self, lib, opts, args, self.client, self.log)
+
+            self.func = func
+        else:
+
+            def func(lib: Library, opts: Values, args: list[str]) -> dict[str, int]:
+                raise ui.UserError(
+                    "Could not construct Client for Redacted API requests. Have you set "
+                    "the required 'api_key' in the redacted plugin configuration?"
+                )
+
+            self.func = func

@@ -178,17 +178,27 @@ Response format:
 
 import dataclasses
 from enum import Enum
-from typing import Generic, Literal, TypeVar, Union
+from typing import Generic, Literal, Optional, TypeVar, Union
 
 from pydantic.dataclasses import dataclass
 
 
-class RedAction(Enum):
+class Action(Enum):
     """Valid actions for the Redacted API."""
 
     BROWSE = "browse"
     REQUESTS = "requests"
     ARTIST = "artist"
+    USER_TORRENTS = "user_torrents"
+
+
+class TorrentType(Enum):
+    """Valid types for user torrents."""
+
+    SEEDING = "seeding"
+    LEECHING = "leeching"
+    UPLOADED = "uploaded"
+    SNATCHED = "snatched"
 
 
 @dataclass
@@ -210,32 +220,32 @@ class RedSearchTorrent:
     """
 
     torrentId: int
-    editionId: Union[int, None] = None
-    artists: Union[list[RedArtist], None] = None
-    remastered: Union[bool, None] = None
-    remasterYear: Union[int, None] = None
-    remasterCatalogueNumber: Union[str, None] = None
-    remasterTitle: Union[str, None] = None
-    media: Union[str, None] = None
-    encoding: Union[str, None] = None
-    format: Union[str, None] = None
-    hasLog: Union[bool, None] = None
-    logScore: Union[int, None] = None
-    hasCue: Union[bool, None] = None
-    scene: Union[bool, None] = None
-    vanityHouse: Union[bool, None] = None
-    fileCount: Union[int, None] = None
-    time: Union[str, None] = None
-    size: Union[int, None] = None
-    snatches: Union[int, None] = None
-    seeders: Union[int, None] = None
-    leechers: Union[int, None] = None
-    isFreeleech: Union[bool, None] = None
-    isNeutralLeech: Union[bool, None] = None
-    isFreeload: Union[bool, None] = None
-    isPersonalFreeleech: Union[bool, None] = None
-    trumpable: Union[bool, None] = None
-    canUseToken: Union[bool, None] = None
+    editionId: Optional[int] = None
+    artists: Optional[list[RedArtist]] = None
+    remastered: Optional[bool] = None
+    remasterYear: Optional[int] = None
+    remasterCatalogueNumber: Optional[str] = None
+    remasterTitle: Optional[str] = None
+    media: Optional[str] = None
+    encoding: Optional[str] = None
+    format: Optional[str] = None
+    hasLog: Optional[bool] = None
+    logScore: Optional[int] = None
+    hasCue: Optional[bool] = None
+    scene: Optional[bool] = None
+    vanityHouse: Optional[bool] = None
+    fileCount: Optional[int] = None
+    time: Optional[str] = None
+    size: Optional[int] = None
+    snatches: Optional[int] = None
+    seeders: Optional[int] = None
+    leechers: Optional[int] = None
+    isFreeleech: Optional[bool] = None
+    isNeutralLeech: Optional[bool] = None
+    isFreeload: Optional[bool] = None
+    isPersonalFreeleech: Optional[bool] = None
+    trumpable: Optional[bool] = None
+    canUseToken: Optional[bool] = None
 
 
 @dataclass
@@ -247,20 +257,20 @@ class RedSearchResult:
     database.
     """
 
-    groupId: Union[int, None] = None
-    torrents: Union[list[RedSearchTorrent], None] = None
-    groupName: Union[str, None] = None
-    artist: Union[str, None] = None
-    tags: Union[list[str], None] = None
-    bookmarked: Union[bool, None] = None
-    vanityHouse: Union[bool, None] = None
-    groupYear: Union[int, None] = None
-    releaseType: Union[str, None] = None
-    groupTime: Union[int, None] = None
-    maxSize: Union[int, None] = None
-    totalSnatched: Union[int, None] = None
-    totalSeeders: Union[int, None] = None
-    totalLeechers: Union[int, None] = None
+    groupId: Optional[int] = None
+    torrents: Optional[list[RedSearchTorrent]] = None
+    groupName: Optional[str] = None
+    artist: Optional[str] = None
+    tags: Optional[list[str]] = None
+    bookmarked: Optional[bool] = None
+    vanityHouse: Optional[bool] = None
+    groupYear: Optional[int] = None
+    releaseType: Optional[str] = None
+    groupTime: Optional[int] = None
+    maxSize: Optional[int] = None
+    totalSnatched: Optional[int] = None
+    totalSeeders: Optional[int] = None
+    totalLeechers: Optional[int] = None
 
 
 @dataclass
@@ -275,21 +285,21 @@ class RedFailureResponse:
     """Base type for failed API responses."""
 
     status: Literal["failure"]
-    error: str
+    error: Optional[str] = None
 
 
 @dataclass
 class RedSearchResults:
     """Type for search results from Redacted API."""
 
-    results: list[RedSearchResult]
+    results: Optional[list[RedSearchResult]] = None
 
 
 @dataclass
 class RedSearchResponse(RedSuccessResponse):
     """Type for the search response from Redacted API."""
 
-    response: RedSearchResults
+    response: Optional[RedSearchResults] = None
 
 
 @dataclass
@@ -323,31 +333,29 @@ class RedArtistTorrent:
     - Different field availability and naming conventions
     """
 
-    id: Union[int, None] = None
-    groupId: Union[int, None] = None
-    media: Union[str, None] = None  # Media, e.g. "Vinyl", "CD", "Web"
-    format: Union[str, None] = None  # Format, e.g. "FLAC", "MP3"
-    encoding: Union[str, None] = None  # Encoding, e.g. "24bit Lossless", "VBR", "CBR"
-    remasterYear: Union[int, None] = None  # Remaster year. 0 indicates no remaster or no value.
-    remastered: Union[bool, None] = None
-    remasterTitle: Union[str, None] = None
-    remasterRecordLabel: Union[str, None] = None
-    scene: Union[bool, None] = None
-    hasLog: Union[bool, None] = None
-    hasCue: Union[bool, None] = None
-    logScore: Union[int, None] = None
-    fileCount: Union[int, None] = (
-        None  # Number of files in the torrent. May include non-audio files.
-    )
-    freeTorrent: Union[bool, None] = None
-    isNeutralleech: Union[bool, None] = None
-    isFreeload: Union[bool, None] = None
-    size: Union[int, None] = None  # Size of the torrent in bytes.
-    leechers: Union[int, None] = None
-    seeders: Union[int, None] = None
-    snatched: Union[int, None] = None
-    time: Union[str, None] = None  # Time string, e.g. "2009-06-06 19:04:22"
-    hasFile: Union[int, None] = None  # Unclear what this is.
+    id: Optional[int] = None
+    groupId: Optional[int] = None
+    media: Optional[str] = None  # Media, e.g. "Vinyl", "CD", "Web"
+    format: Optional[str] = None  # Format, e.g. "FLAC", "MP3"
+    encoding: Optional[str] = None  # Encoding, e.g. "24bit Lossless", "VBR", "CBR"
+    remasterYear: Optional[int] = None  # Remaster year. 0 indicates no remaster or no value.
+    remastered: Optional[bool] = None
+    remasterTitle: Optional[str] = None
+    remasterRecordLabel: Optional[str] = None
+    scene: Optional[bool] = None
+    hasLog: Optional[bool] = None
+    hasCue: Optional[bool] = None
+    logScore: Optional[int] = None
+    fileCount: Optional[int] = None  # Number of files in the torrent. May include non-audio files.
+    freeTorrent: Optional[bool] = None
+    isNeutralleech: Optional[bool] = None
+    isFreeload: Optional[bool] = None
+    size: Optional[int] = None  # Size of the torrent in bytes.
+    leechers: Optional[int] = None
+    seeders: Optional[int] = None
+    snatched: Optional[int] = None
+    time: Optional[str] = None  # Time string, e.g. "2009-06-06 19:04:22"
+    hasFile: Optional[int] = None  # Unclear what this is.
 
 
 @dataclass
@@ -363,47 +371,47 @@ class RedArtistTorrentGroup:
     - The artist is implied by the parent artist response
     """
 
-    groupId: Union[int, None] = None
-    groupName: Union[str, None] = None
-    groupYear: Union[int, None] = None
-    groupRecordLabel: Union[str, None] = None
-    groupCatalogueNumber: Union[str, None] = None
-    tags: Union[list[str], None] = None
-    releaseType: Union[int, None] = None
-    groupVanityHouse: Union[bool, None] = None
-    hasBookmarked: Union[bool, None] = None
-    torrent: Union[list[RedArtistTorrent], None] = None
+    groupId: Optional[int] = None
+    groupName: Optional[str] = None
+    groupYear: Optional[int] = None
+    groupRecordLabel: Optional[str] = None
+    groupCatalogueNumber: Optional[str] = None
+    tags: Optional[list[str]] = None
+    releaseType: Optional[int] = None
+    groupVanityHouse: Optional[bool] = None
+    hasBookmarked: Optional[bool] = None
+    torrent: Optional[list[RedArtistTorrent]] = None
 
 
 @dataclass
 class RedArtistRequest:
     """Type for a request in an artist result."""
 
-    requestId: Union[int, None] = None
-    categoryId: Union[int, None] = None
-    title: Union[str, None] = None
-    year: Union[int, None] = None
-    timeAdded: Union[str, None] = None
-    votes: Union[int, None] = None
-    bounty: Union[int, None] = None
+    requestId: Optional[int] = None
+    categoryId: Optional[int] = None
+    title: Optional[str] = None
+    year: Optional[int] = None
+    timeAdded: Optional[str] = None
+    votes: Optional[int] = None
+    bounty: Optional[int] = None
 
 
 @dataclass
 class RedArtistResponseResults:
     """Type for the artist response data."""
 
-    id: Union[int, None] = None
-    name: Union[str, None] = None
-    notificationsEnabled: Union[bool, None] = None
-    hasBookmarked: Union[bool, None] = None
-    image: Union[str, None] = None
-    body: Union[str, None] = None
-    vanityHouse: Union[bool, None] = None
-    tags: Union[list[RedArtistTag], None] = None
-    similarArtists: Union[list[dict], None] = None
-    statistics: Union[RedArtistStatistics, None] = None
-    torrentgroup: Union[list[RedArtistTorrentGroup], None] = None
-    requests: Union[list[RedArtistRequest], None] = None
+    id: Optional[int] = None
+    name: Optional[str] = None
+    notificationsEnabled: Optional[bool] = None
+    hasBookmarked: Optional[bool] = None
+    image: Optional[str] = None
+    body: Optional[str] = None
+    vanityHouse: Optional[bool] = None
+    tags: Optional[list[RedArtistTag]] = None
+    similarArtists: Optional[list[dict]] = None
+    statistics: Optional[RedArtistStatistics] = None
+    torrentgroup: Optional[list[RedArtistTorrentGroup]] = None
+    requests: Optional[list[RedArtistRequest]] = None
 
 
 @dataclass
@@ -411,6 +419,32 @@ class RedArtistResponse(RedSuccessResponse):
     """Type for the artist response from Redacted API."""
 
     response: RedArtistResponseResults
+
+
+@dataclass
+class RedUserTorrent:
+    """Type for a user torrent."""
+
+    groupId: Optional[int] = None
+    name: Optional[str] = None
+    torrentId: Optional[int] = None
+    artistName: Optional[str] = None
+    artistId: Optional[int] = None
+
+
+@dataclass
+class RedUserResponseResults:
+    seeding: Optional[list[RedUserTorrent]] = None
+    leeching: Optional[list[RedUserTorrent]] = None
+    uploaded: Optional[list[RedUserTorrent]] = None
+    snatched: Optional[list[RedUserTorrent]] = None
+
+
+@dataclass
+class RedUserResponse(RedSuccessResponse):
+    """Type for the user response from Redacted API."""
+
+    response: Optional[RedUserResponseResults] = None
 
 
 RedactedAPIResponse = Union[RedSearchResponse, RedArtistResponse, RedFailureResponse]

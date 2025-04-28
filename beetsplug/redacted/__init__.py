@@ -3,16 +3,15 @@
 
 import time
 from pkgutil import extend_path
-from typing import Union
+from typing import Optional
 
 import frozendict
 from beets.dbcore import types as dbtypes  # type: ignore[import-untyped]
 from beets.importer import ImportTask  # type: ignore[import-untyped]
 from beets.library import Library  # type: ignore[import-untyped]
 from beets.plugins import BeetsPlugin  # type: ignore[import-untyped]
-from beets.ui import UserError  # type: ignore[import-untyped]
 
-from beetsplug.redacted.client import RedactedClient
+from beetsplug.redacted.client import Client
 from beetsplug.redacted.command import RedactedCommand
 from beetsplug.redacted.http import CachedRequestsClient, HTTPClient
 from beetsplug.redacted.search import search
@@ -59,34 +58,50 @@ class RedactedPlugin(BeetsPlugin):
         }
     )
 
+    default_config = frozendict.frozendict(
+        {"api_key": None, "user_id": None, "min_score": 0.75, "auto": False}
+    )
+
     def __init__(self) -> None:
         """Initialize the plugin."""
         super().__init__()
-        self.config.add({"api_key": "", "min_score": 0.75, "auto": False})
-        self._http_client = CachedRequestsClient(self.BASE_URL, self._log)
-        self.register_listener("cli_exit", self.cleanup)
 
-        self._client = self._get_client(self._http_client)
+        self.config.add(self.default_config)
         self._min_score = self.config["min_score"].as_number()
 
-        # Register import stage if 'auto' is enabled
+        self._http_client = CachedRequestsClient(self.BASE_URL, self._log)
+        self._client = self._get_client(self._http_client)
+
+        # Register import stage if 'auto' is True
         if self._client and self.config["auto"].get(bool):
             self.import_stages = [self.import_stage]
 
-    def _get_client(self, http_client: HTTPClient) -> Union[RedactedClient, None]:
+        self.register_listener("cli_exit", self.cleanup)
+
+    def _get_client(self, http_client: HTTPClient) -> Optional[Client]:
         """Get or create the RedactedClient instance."""
         api_key = self.config["api_key"].get()
         if not api_key:
             self._log.warning("redacted: api_key not set in configuration.")
             return None
-        return RedactedClient(api_key, http_client, self._log)
 
-    def cleanup(self, _: Library) -> None:
+        user_id = self.config["user_id"].get()
+        if not user_id:
+            self._log.warning(
+                "redacted: user_id not set in configuration. "
+                "Will not be able to consider snatched torrents."
+            )
+
+        return Client(http_client, self._log, api_key, user_id=user_id)
+
+    def cleanup(self) -> None:
         """Clean up resources when Beets is shutting down."""
         self._http_client.close()
 
     def import_stage(self, _: Library, task: ImportTask) -> bool:
         """Process an album during import.
+
+        Adds Redacted metadata to the album.
 
         Args:
             _: Library instance
@@ -121,9 +136,4 @@ class RedactedPlugin(BeetsPlugin):
         Returns:
             List of commands.
         """
-        api_key = self.config["api_key"].get()
-        if not api_key:
-            raise UserError("redacted: api_key not set")
-
-        client = RedactedClient(api_key, self._http_client, self._log)
-        return [RedactedCommand(self.config, self._log, client)]
+        return [RedactedCommand(self.config, self._log, self._client)]

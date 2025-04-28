@@ -74,13 +74,13 @@ class RequestsClient(HTTPClient):
             return response
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 429:
-                self.log.debug("Redacted rate limit exceeded response: %s", e.response.text)
+                self.log.debug("Redacted rate limit exceeded response: {0}", e.response.text)
                 raise RedactedRateLimitError("Rate limit exceeded") from e
 
-            self.log.debug("Redacted API error response: %s", e.response.text)
+            self.log.debug("Redacted API error response: {0}", e.response.text)
             raise RedactedError(f"HTTP error: {e}") from e
         except requests.exceptions.RequestException as e:
-            self.log.debug("Redacted request error: %s", e)
+            self.log.debug("Redacted request error: {0}", e)
             raise RedactedError(f"Request error: {e}") from e
 
     @sleep_and_retry  # type: ignore[misc]

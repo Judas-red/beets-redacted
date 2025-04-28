@@ -20,7 +20,8 @@ redacted:
 
 The configuration options are
 
-- **api_key** (required): Your Redacted API key, with at least 'torrents' scope.
+- **api_key** (required): Your Redacted API key, with at least 'torrents' scope. If `user_id` is also set, the API key must also have the 'User' scope.
+- **user_id** (default: empty): Your Redacted user id, used only for looking up your snatches to improve torrent matching. To find your Redacted user id, go to your profile and copy the "id" parameter from the URL bar. It will likely be a number between 1 and 100,000.
 - **auto** (default: no): When enabled, search for matching torrents during import.
 - **force** (default: no): When enabled, search for matching torrents even for albums that already have a match in the database.
 - **pretend** (default: no): When enabled, show the changes that would be made to the database, but do not modify the database.
@@ -31,6 +32,7 @@ For example,
 ```yaml
 redacted:
   api_key: ...
+  user_id: ...
   auto: no
   force: no
   pretend: no
@@ -78,6 +80,12 @@ beet missing -a -c -f '$albumartist - $album: Missing $missing; Red: https://red
 1. Improved album - torrent matching logic.
 1. Configure preferred torrent encoding, e.g. 'Lossless' > '24bit Lossless' > 'V0 (VBR)' > '320'.
 1. Command for snatching and exporting `.torrent` files.
+
+Planned matching improvements:
+
+- ~~Prioritize user's snatches~~
+- If possible, re-use Beets' distance matching algorithm.
+- Add fields other than artist name, album name, and year to the matching process. It should also include the album's media, distributor, multiple artists, remastering, format, encoding, if it's personal freeleech, and if it's bookmarked.
 
 ## Contributing
 

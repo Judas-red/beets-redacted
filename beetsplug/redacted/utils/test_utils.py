@@ -69,13 +69,13 @@ import copy
 import logging
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Protocol, Union
+from typing import TYPE_CHECKING, Any, Optional, Protocol, Union
 
 import requests
 from beets import library  # type: ignore[import-untyped]
 from beets.library import Album  # type: ignore[import-untyped]
 
-from beetsplug.redacted.client import RedactedClient
+from beetsplug.redacted.client import Client
 from beetsplug.redacted.exceptions import RedactedError
 from beetsplug.redacted.http import HTTPClient
 from beetsplug.redacted.types import (
@@ -83,6 +83,8 @@ from beetsplug.redacted.types import (
     RedArtistResponseResults,
     RedSearchResponse,
     RedSearchResults,
+    RedUserResponse,
+    TorrentType,
 )
 
 # Forward declaration for type checking
@@ -395,7 +397,8 @@ class FakeLogger(logging.Logger):
     def __init__(self) -> None:
         """Initialize fake logger."""
         super().__init__("fake")
-        self.messages: list[str] = []
+        self.logger = logging.getLogger("FakeLogger")
+        self.messages: list[tuple[str, tuple[Any]]] = []
 
     def debug(self, msg: str, *args: Any) -> None:  # type: ignore[override]
         """Log a debug message.
@@ -404,7 +407,8 @@ class FakeLogger(logging.Logger):
             msg: Message to log
             args: Format arguments
         """
-        self.messages.append(msg.format(*args))
+        self.logger.debug(msg.format(*args))
+        self.messages.append((msg, args))
 
     def info(self, msg: str, *args: Any) -> None:  # type: ignore[override]
         """Log an info message.
@@ -413,7 +417,8 @@ class FakeLogger(logging.Logger):
             msg: Message to log
             args: Format arguments
         """
-        self.messages.append(msg.format(*args))
+        self.logger.info(msg.format(*args))
+        self.messages.append((msg, args))
 
     def error(self, msg: str, *args: Any) -> None:  # type: ignore[override]
         """Log an error message.
@@ -422,16 +427,18 @@ class FakeLogger(logging.Logger):
             msg: Message to log
             args: Format arguments
         """
-        self.messages.append(msg.format(*args))
+        self.logger.error(msg.format(*args))
+        self.messages.append((msg, args))
 
-    def assert_message(self, msg: str) -> None:
+    def assert_message(self, msg: str, args: tuple[Any, ...]) -> None:
         """Assert that a message was logged.
 
         Args:
             msg: Message to check for. This can be a substring of the actual message.
+            args: Format arguments
         """
         for message in self.messages:
-            if msg in message:
+            if msg in message[0] and args == message[1]:
                 return
         raise AssertionError(f"Expected message containing '{msg}' not found in {self.messages}")
 
@@ -523,13 +530,14 @@ class FakeHTTPClient(HTTPClient):
         return self.responses[request_hash]
 
 
-class FakeRedactedClient(RedactedClient):
+class FakeClient(Client):
     """Fake implementation of RedactedClient for testing."""
 
     def __init__(self) -> None:
         """Initialize the fake client."""
         self.search_responses: dict[str, RedSearchResponse] = {}
         self.artist_responses: dict[int, RedArtistResponse] = {}
+        self.user_response: Optional[RedUserResponse] = None
         self.queries: list[str] = []
         self.error_queries: set[str] = set()
         self.rate_limit_queries: set[str] = set()
@@ -537,7 +545,7 @@ class FakeRedactedClient(RedactedClient):
         self.error_artist_queries: set[int] = set()
         self.rate_limit_artist_queries: set[int] = set()
 
-    def browse(self, query: str) -> RedSearchResponse:
+    def search(self, query: str) -> RedSearchResponse:
         """Fake implementation of browse method.
 
         Args:
@@ -593,6 +601,13 @@ class FakeRedactedClient(RedactedClient):
             )
 
         return self.artist_responses[artist_id]
+
+    def user(self, _: TorrentType, limit: int = 500, offset: int = 0) -> RedUserResponse:
+        """Fake implementation of user torrents lookup (snatched, seeding, etc)."""
+        if self.user_response:
+            return self.user_response
+
+        raise RedactedError("Fake user lookup failure")
 
 
 class FakeCommandOpts:
