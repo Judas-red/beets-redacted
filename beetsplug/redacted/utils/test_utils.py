@@ -84,7 +84,6 @@ from beetsplug.redacted.types import (
     RedSearchResponse,
     RedSearchResults,
     RedUserResponse,
-    RedUserResponseResults,
     TorrentType,
 )
 

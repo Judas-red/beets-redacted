@@ -3,18 +3,17 @@
 
 import time
 from pkgutil import extend_path
-from typing import Optional, Union
+from typing import Optional
 
 import frozendict
 from beets.dbcore import types as dbtypes  # type: ignore[import-untyped]
 from beets.importer import ImportTask  # type: ignore[import-untyped]
-from beets.library import Album, Item, Library  # type: ignore[import-untyped]
+from beets.library import Library  # type: ignore[import-untyped]
 from beets.plugins import BeetsPlugin  # type: ignore[import-untyped]
 
 from beetsplug.redacted.client import Client
 from beetsplug.redacted.command import RedactedCommand
 from beetsplug.redacted.http import CachedRequestsClient, HTTPClient
-from beetsplug.redacted.metadata import candidates
 from beetsplug.redacted.search import search
 
 __path__ = extend_path(__path__, __name__)
@@ -79,7 +78,7 @@ class RedactedPlugin(BeetsPlugin):
 
         self.register_listener("cli_exit", self.cleanup)
 
-    def _get_client(self, http_client: HTTPClient) -> Union[Client, None]:
+    def _get_client(self, http_client: HTTPClient) -> Optional[Client]:
         """Get or create the RedactedClient instance."""
         api_key = self.config["api_key"].get()
         if not api_key:
@@ -138,18 +137,3 @@ class RedactedPlugin(BeetsPlugin):
             List of commands.
         """
         return [RedactedCommand(self.config, self._log, self._client)]
-
-    def candidates(
-        self,
-        items: list[Item],
-        artist: str,
-        album: str,
-        va_likely: bool,
-        extra_tags: Optional[dict[str, str]] = None,
-    ) -> list[Album]:
-        if not self._client:
-            return []
-
-        return candidates(
-            self._client, self._log, items, artist, album, va_likely, extra_tags=extra_tags
-        )

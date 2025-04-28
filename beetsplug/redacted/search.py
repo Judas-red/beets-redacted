@@ -431,6 +431,10 @@ def best_match_from_snatched(
     # to match.
     log.debug("Retrieving user's snatched torrents")
     user_response = client.user(TorrentType.SNATCHED)
+    if not (user_response and user_response.response and user_response.response.snatched):
+        log.debug("No snatched torrents found")
+        return None, 0.0
+
     snatched_torrents = [
         RedTorrent.from_user_torrent(torrent, log) for torrent in user_response.response.snatched
     ]
@@ -449,9 +453,14 @@ def best_match_from_search(
         return None, 0.0
 
     log.debug("Searching for torrents with query: {0}", search_query)
+    search_response = client.search(search_query)
+
+    if not (search_response and search_response.response and search_response.response.results):
+        log.debug("No search results found")
+        return None, 0.0
+
     results = [
-        RedTorrent.from_search_result(group, log)
-        for group in client.search(search_query).response.results
+        RedTorrent.from_search_result(group, log) for group in search_response.response.results
     ]
 
     return match_album(album, itertools.chain.from_iterable(results), log)
