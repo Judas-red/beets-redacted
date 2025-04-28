@@ -95,7 +95,7 @@ class RedactedPlugin(BeetsPlugin):
 
         return Client(http_client, self._log, api_key, user_id=user_id)
 
-    def cleanup(self, _: Library) -> None:
+    def cleanup(self) -> None:
         """Clean up resources when Beets is shutting down."""
         self._http_client.close()
 
@@ -137,8 +137,7 @@ class RedactedPlugin(BeetsPlugin):
         Returns:
             List of commands.
         """
-        client = self._get_client(self._http_client)
-        return [RedactedCommand(self.config, self._log, client)]
+        return [RedactedCommand(self.config, self._log, self._client)]
 
     def candidates(
         self,
@@ -148,6 +147,9 @@ class RedactedPlugin(BeetsPlugin):
         va_likely: bool,
         extra_tags: Optional[dict[str, str]] = None,
     ) -> list[Album]:
+        if not self._client:
+            return []
+
         return candidates(
-            self.client, self.log, items, artist, album, va_likely, extra_tags=extra_tags
+            self._client, self._log, items, artist, album, va_likely, extra_tags=extra_tags
         )
