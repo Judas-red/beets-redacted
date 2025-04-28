@@ -20,7 +20,7 @@ redacted:
 
 The configuration options are
 
-- **api_key** (required): Your Redacted API key, with at least 'torrents' scope.
+- **api_key** (required): Your Redacted API key, with at least 'torrents' scope. If `user_id` is also set, the API key must also have the 'User' scope.
 - **user_id** (default: empty): Your Redacted user id, used only for looking up your snatches to improve torrent matching. To find your Redacted user id, go to your profile and copy the "id" parameter from the URL bar. It will likely be a number between 1 and 100,000.
 - **auto** (default: no): When enabled, search for matching torrents during import.
 - **force** (default: no): When enabled, search for matching torrents even for albums that already have a match in the database.
